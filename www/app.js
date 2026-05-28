@@ -105,8 +105,8 @@ let lastSaveTime = 0;
 
 // Server API Configuration (for mobile/Capacitor support)
 let API_BASE_URL = localStorage.getItem("nebula_api_base_url");
-if (!API_BASE_URL || API_BASE_URL === "http://localhost:9001" || API_BASE_URL.includes("192.168.31.15") || API_BASE_URL.includes("API_BASE_URL")) {
-    API_BASE_URL = "https://lamb-lloyd-pets-exterior.trycloudflare.com";
+if (!API_BASE_URL || API_BASE_URL === "http://localhost:9001" || API_BASE_URL.includes("192.168.31.15") || API_BASE_URL.includes("lamb-lloyd-pets-exterior") || API_BASE_URL.includes("API_BASE_URL")) {
+    API_BASE_URL = "https://mandate-widescreen-jill-peak.trycloudflare.com";
     localStorage.setItem("nebula_api_base_url", API_BASE_URL);
 }
 let isServerConnected = false;
