@@ -105,10 +105,11 @@ let lastSaveTime = 0;
 
 // Server API Configuration (for mobile/Capacitor support)
 let API_BASE_URL = localStorage.getItem("nebula_api_base_url");
-if (!API_BASE_URL || API_BASE_URL === "http://localhost:9001" || API_BASE_URL.includes("API_BASE_URL")) {
-    API_BASE_URL = "http://192.168.31.15:9001";
+if (!API_BASE_URL || API_BASE_URL === "http://localhost:9001" || API_BASE_URL.includes("192.168.31.15") || API_BASE_URL.includes("API_BASE_URL")) {
+    API_BASE_URL = "https://lamb-lloyd-pets-exterior.trycloudflare.com";
     localStorage.setItem("nebula_api_base_url", API_BASE_URL);
 }
+let isServerConnected = false;
 
 // Web Audio API Nodes
 let audioCtx = null;
@@ -134,6 +135,131 @@ const MAX_BARS = 64;
 // Stars/particles for background canvas rendering
 let stars = [];
 
+// Test connection to backend proxy on startup
+async function checkConnectionAndInit() {
+    const statusHeader = document.getElementById("syncStatus");
+    if (statusHeader) {
+        statusHeader.innerHTML = `<span style="color: var(--accent-secondary); animation: nebula-pulse 1.2s infinite alternate; font-weight: 500;">⚡ Подключение...</span>`;
+    }
+    
+    // Add dynamic keyframes for pulsing connection state if not already defined
+    if (!document.getElementById("nebula-pulse-style")) {
+        const style = document.createElement("style");
+        style.id = "nebula-pulse-style";
+        style.textContent = `
+            @keyframes nebula-pulse {
+                0% { opacity: 0.4; }
+                100% { opacity: 1; }
+            }
+        `;
+        document.head.appendChild(style);
+    }
+
+    try {
+        // Use an AbortController to set a 4-second timeout
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 4000);
+        
+        const res = await fetch(`${API_BASE_URL}/api/health`, { 
+            signal: controller.signal,
+            headers: { 'Cache-Control': 'no-cache' }
+        });
+        clearTimeout(timeoutId);
+        
+        if (res.ok) {
+            const data = await res.json();
+            if (data.status === "ok") {
+                isServerConnected = true;
+                if (statusHeader) {
+                    statusHeader.innerHTML = `<span style="color: #00ffcc; display: inline-flex; align-items: center; gap: 4px;"><span style="display: inline-block; width: 6px; height: 6px; background-color: #00ffcc; border-radius: 50%; box-shadow: 0 0 6px #00ffcc;"></span> Подключено</span>`;
+                }
+                showFeedback("🪐 Подключение к Nebula Cloud установлено!");
+                
+                // Trigger background sync and recommendations load
+                await syncUserDataFromServer();
+                loadHomeRecommendations('pop');
+                return;
+            }
+        }
+        throw new Error("Invalid status");
+    } catch (e) {
+        console.warn("Nebula connection probe failed:", e);
+        isServerConnected = false;
+        if (statusHeader) {
+            statusHeader.innerHTML = `<span style="color: #ff3366; display: inline-flex; align-items: center; gap: 4px;"><span style="display: inline-block; width: 6px; height: 6px; background-color: #ff3366; border-radius: 50%; box-shadow: 0 0 6px #ff3366;"></span> Офлайн</span>`;
+        }
+        showFeedback("⚠️ Сервер недоступен! Работаем локально.");
+        
+        // Show interactive notification with retry/config options
+        setTimeout(() => {
+            const container = document.querySelector(".toast-feedback-container");
+            if (container) {
+                // Remove previous connection warning toasts if they exist
+                const oldWarns = container.querySelectorAll(".connection-warning-toast");
+                oldWarns.forEach(w => w.remove());
+                
+                const toast = document.createElement("div");
+                toast.className = "connection-warning-toast";
+                toast.style.background = "rgba(15, 10, 25, 0.95)";
+                toast.style.backdropFilter = "blur(12px)";
+                toast.style.border = "1px solid var(--border-color)";
+                toast.style.borderRadius = "8px";
+                toast.style.padding = "14px";
+                toast.style.color = "#fff";
+                toast.style.fontSize = "0.82rem";
+                toast.style.boxShadow = "0 8px 32px rgba(0,0,0,0.5)";
+                toast.style.width = "300px";
+                toast.style.margin = "0 auto";
+                toast.style.display = "flex";
+                toast.style.flexDirection = "column";
+                toast.style.gap = "10px";
+                
+                toast.innerHTML = `
+                    <div style="display: flex; align-items: center; gap: 8px; font-weight: 700; color: var(--accent-secondary);">
+                        <i class="ph ph-warning" style="font-size: 1.1rem;"></i>
+                        <span>Нет связи с Nebula Proxy</span>
+                    </div>
+                    <div style="font-size: 0.72rem; color: var(--text-muted); line-height: 1.4;">
+                        Убедитесь, что сервер <code style="color: #00ffcc; background: rgba(0,0,0,0.3); padding: 2px 4px; border-radius: 4px;">yt_proxy.py</code> запущен на вашем ПК.<br>
+                        Адрес подключения:<br>
+                        <code style="word-break: break-all; font-family: monospace; color: rgba(255,255,255,0.8);">${API_BASE_URL}</code>
+                    </div>
+                    <div style="display: flex; gap: 8px;">
+                        <button id="btnToastRetry" style="flex: 1; padding: 6px 10px; border: none; border-radius: 4px; background: var(--accent-secondary); color: #fff; font-size: 0.75rem; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 4px;">
+                            <i class="ph ph-arrow-counter-clockwise"></i> Повторить
+                        </button>
+                        <button id="btnToastSettings" style="padding: 6px 10px; border: 1px solid var(--border-color); border-radius: 4px; background: rgba(255,255,255,0.05); color: #fff; font-size: 0.75rem; cursor: pointer;">
+                            Настройки
+                        </button>
+                    </div>
+                `;
+                
+                container.appendChild(toast);
+                
+                toast.querySelector("#btnToastRetry").addEventListener("click", () => {
+                    toast.remove();
+                    checkConnectionAndInit();
+                });
+                
+                toast.querySelector("#btnToastSettings").addEventListener("click", () => {
+                    toast.remove();
+                    openAccountModal();
+                });
+                
+                // Dismiss warning toast after 12 seconds
+                setTimeout(() => {
+                    if (toast.parentNode) {
+                        toast.style.opacity = "0";
+                        toast.style.transform = "translateY(20px)";
+                        toast.style.transition = "all 0.4s ease";
+                        setTimeout(() => toast.remove(), 400);
+                    }
+                }, 12000);
+            }
+        }, 1200);
+    }
+}
+
 // Initialize Web Page
 document.addEventListener("DOMContentLoaded", () => {
     initUI();
@@ -149,11 +275,8 @@ document.addEventListener("DOMContentLoaded", () => {
     setupElectronFrame();
     updateProfileUI();
     
-    // Sync with SQLite database
-    syncUserDataFromServer();
-    
-    // Load pop recommendations on startup
-    loadHomeRecommendations('pop');
+    // Test connectivity and load data accordingly
+    checkConnectionAndInit();
 });
 
 // Setup custom frameless window actions for Windows/Desktop app
@@ -1663,8 +1786,9 @@ function saveConnectionSettings() {
     
     showFeedback(`Адрес подключения изменен: ${url}`);
     
-    // Trigger sync to fetch with the new url
-    syncUserDataFromServer();
+    // Close modal and test connectivity immediately
+    closeAccountModal();
+    checkConnectionAndInit();
 }
 
 async function handleAuth(type) {
@@ -1871,7 +1995,13 @@ function updateProfileUI() {
         
         if (avatarHeader) avatarHeader.innerHTML = user.avatar;
         if (nicknameHeader) nicknameHeader.innerText = loggedInUser;
-        if (statusHeader) statusHeader.innerText = "Облако активно";
+        if (statusHeader) {
+            if (isServerConnected) {
+                statusHeader.innerHTML = `<span style="color: #00ffcc; display: inline-flex; align-items: center; gap: 4px;"><span style="display: inline-block; width: 6px; height: 6px; background-color: #00ffcc; border-radius: 50%; box-shadow: 0 0 6px #00ffcc;"></span> Облако активно</span>`;
+            } else {
+                statusHeader.innerHTML = `<span style="color: #ff3366; display: inline-flex; align-items: center; gap: 4px;"><span style="display: inline-block; width: 6px; height: 6px; background-color: #ff3366; border-radius: 50%; box-shadow: 0 0 6px #ff3366;"></span> Офлайн</span>`;
+            }
+        }
         
         if (authView) authView.style.display = "none";
         if (profileView) profileView.style.display = "block";
@@ -1891,7 +2021,13 @@ function updateProfileUI() {
     } else {
         if (avatarHeader) avatarHeader.innerHTML = '<i class="ph-fill ph-alien"></i>';
         if (nicknameHeader) nicknameHeader.innerText = "Гость";
-        if (statusHeader) statusHeader.innerText = "Нажмите для входа";
+        if (statusHeader) {
+            if (isServerConnected) {
+                statusHeader.innerHTML = "Нажмите для входа";
+            } else {
+                statusHeader.innerHTML = `<span style="color: #ff3366; display: inline-flex; align-items: center; gap: 4px;"><span style="display: inline-block; width: 6px; height: 6px; background-color: #ff3366; border-radius: 50%; box-shadow: 0 0 6px #ff3366;"></span> Офлайн</span>`;
+            }
+        }
         
         if (authView) authView.style.display = "block";
         if (profileView) profileView.style.display = "none";
@@ -2305,7 +2441,7 @@ function handleSearch(query) {
 // YouTube Music Integration via Piped API
 // ==========================================================================
 // YouTube Music Integration via Local Proxy (yt-dlp)
-const YT_PROXY_URL = API_BASE_URL;
+let YT_PROXY_URL = API_BASE_URL;
 
 let ytNextPage = null; // Pagination not supported by proxy yet
 let ytLastQuery = "";
