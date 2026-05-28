@@ -111,6 +111,127 @@ if (!API_BASE_URL || API_BASE_URL === "http://localhost:9001" || API_BASE_URL.in
 }
 let isServerConnected = false;
 
+// Synchronize play/pause state across all player interfaces (Desktop & Mobile Full Player)
+function updatePlayStateUI() {
+    const btnPlay = document.getElementById("btnPlay");
+    const mobBtnPlay = document.getElementById("mobFullBtnPlay");
+    const vinyl = document.getElementById("vinylDisc");
+    const mobCover = document.getElementById("mobFullCover");
+    
+    if (isPlaying) {
+        if (btnPlay) btnPlay.innerHTML = '<i class="ph-fill ph-pause-circle"></i>';
+        if (mobBtnPlay) mobBtnPlay.innerHTML = '<i class="ph-fill ph-pause-circle"></i>';
+        if (vinyl) vinyl.classList.add("playing");
+        if (mobCover) mobCover.classList.add("playing");
+    } else {
+        if (btnPlay) btnPlay.innerHTML = '<i class="ph-fill ph-play-circle"></i>';
+        if (mobBtnPlay) mobBtnPlay.innerHTML = '<i class="ph-fill ph-play-circle"></i>';
+        if (vinyl) vinyl.classList.remove("playing");
+        if (mobCover) mobCover.classList.remove("playing");
+    }
+}
+
+// Open/close fullscreen mobile player overlay (Yandex Music & Spotify style)
+function openMobileFullPlayer() {
+    const player = document.getElementById("mobileFullPlayer");
+    if (player) {
+        player.classList.add("active");
+        updateMobileFullPlayerUI();
+    }
+}
+
+// Close fullscreen mobile player overlay
+function closeMobileFullPlayer() {
+    const player = document.getElementById("mobileFullPlayer");
+    if (player) {
+        player.classList.remove("active");
+    }
+}
+
+// Update mobile full screen player details dynamically
+function updateMobileFullPlayerUI() {
+    const track = playlist[currentTrackIdx];
+    if (!track) return;
+    
+    const mobTitle = document.getElementById("mobFullTitle");
+    const mobArtist = document.getElementById("mobFullArtist");
+    const mobCover = document.getElementById("mobFullCover");
+    
+    if (mobTitle) mobTitle.innerText = track.title;
+    if (mobArtist) mobArtist.innerText = track.artist;
+    if (mobCover) mobCover.innerHTML = track.cover || '💿';
+    
+    // Sync states
+    updateLikeButtonIcon();
+    updatePlayStateUI();
+    updateLoopButtonUI();
+    
+    // Sync volume slider value
+    const mobVolSlider = document.getElementById("mobFullVolumeSlider");
+    if (mobVolSlider) mobVolSlider.value = volumeBeforeMute;
+    
+    // Sync progress timeline
+    const cur = audioElement.currentTime;
+    const duration = audioElement.duration || 0;
+    const percent = duration > 0 ? (cur / duration) * 100 : 0;
+    
+    const mobFill = document.getElementById("mobFullProgressBarFill");
+    if (mobFill) mobFill.style.width = `${percent}%`;
+    
+    const mobCur = document.getElementById("mobFullTimeCurrent");
+    if (mobCur) mobCur.innerText = formatTime(cur);
+    
+    const mobTot = document.getElementById("mobFullTimeTotal");
+    if (mobTot) mobTot.innerText = duration > 0 ? formatTime(duration) : "0:00";
+    
+    // Update synced lyrics teaser inside the mobile screen player
+    updateMobLyricsTeaser();
+}
+
+// Mobile-specific timeline click-seeking
+function seekAudioMob(e) {
+    const progressWrapper = document.getElementById("mobFullProgressBarWrapper");
+    if (!progressWrapper) return;
+    const rect = progressWrapper.getBoundingClientRect();
+    const clickX = e.clientX - rect.left;
+    const width = rect.width;
+    
+    const clickPercent = Math.max(0, Math.min(1, clickX / width));
+    const duration = audioElement.duration || 0;
+    
+    if (duration > 0) {
+        audioElement.currentTime = clickPercent * duration;
+        updateTimeline();
+    }
+}
+
+// Real-time synced lyrics preview box on mobile overlay
+function updateMobLyricsTeaser() {
+    const teaser = document.getElementById("mobFullLyricsTeaser");
+    if (!teaser) return;
+    
+    if (!currentLyrics || currentLyrics.length === 0) {
+        teaser.innerText = "Текст песни недоступен";
+        return;
+    }
+    
+    const curTime = audioElement.currentTime;
+    let activeIdx = -1;
+    for (let i = 0; i < currentLyrics.length; i++) {
+        if (curTime >= currentLyrics[i].time) {
+            activeIdx = i;
+        } else {
+            break;
+        }
+    }
+    
+    if (activeIdx !== -1 && currentLyrics[activeIdx]) {
+        teaser.innerText = currentLyrics[activeIdx].text;
+    } else {
+        teaser.innerText = "Слушайте трек с текстом песни...";
+    }
+}
+
 // Web Audio API Nodes
 let audioCtx = null;
 let audioElement = null;
@@ -356,7 +477,27 @@ function initUI() {
 
     // Timeline Clicking / Scrubbing
     const progressWrapper = document.getElementById("progressBarWrapper");
-    progressWrapper.addEventListener("click", seekAudio);
+    if (progressWrapper) progressWrapper.addEventListener("click", seekAudio);
+    
+    const mobProgressWrapper = document.getElementById("mobFullProgressBarWrapper");
+    if (mobProgressWrapper) mobProgressWrapper.addEventListener("click", seekAudioMob);
+
+    // Bottom Player Bar Click Handler to open full mobile player
+    const bottomPlayer = document.querySelector(".bottom-player-bar");
+    if (bottomPlayer) {
+        bottomPlayer.addEventListener("click", (e) => {
+            // Check if on mobile view
+            if (window.innerWidth <= 768) {
+                // Do not trigger full screen player if clicking control buttons, icons, range inputs
+                const isControlClick = e.target.closest("button") || 
+                                       e.target.closest(".progress-bar-wrapper") || 
+                                       e.target.closest("input");
+                if (!isControlClick) {
+                    openMobileFullPlayer();
+                }
+            }
+        });
+    }
 
     // File Input / Drag & Drop Setup
     const dropzone = document.getElementById("uploadDropzone");
@@ -530,9 +671,18 @@ function loadTrack(idx, seekToTime = null) {
     document.getElementById("progressBarFill").style.width = "0%";
     document.getElementById("timeCurrent").innerText = "0:00";
     
+    const mobProgressBarFill = document.getElementById("mobFullProgressBarFill");
+    if (mobProgressBarFill) mobProgressBarFill.style.width = "0%";
+    const mobTimeCurrent = document.getElementById("mobFullTimeCurrent");
+    if (mobTimeCurrent) mobTimeCurrent.innerText = "0:00";
+    
     // Handle duration loading metadata
     audioElement.onloadedmetadata = () => {
-        document.getElementById("timeTotal").innerText = formatTime(audioElement.duration);
+        const durationText = formatTime(audioElement.duration);
+        document.getElementById("timeTotal").innerText = durationText;
+        
+        const mobTimeTotal = document.getElementById("mobFullTimeTotal");
+        if (mobTimeTotal) mobTimeTotal.innerText = durationText;
         
         // Apply speed and pitch preservation
         applySpeedAndPitch();
@@ -566,6 +716,14 @@ function loadTrack(idx, seekToTime = null) {
     
     const barCover = document.getElementById("barCover");
     if (barCover) barCover.innerHTML = track.cover || '<i class="ph-fill ph-music-notes"></i>';
+
+    // Mobile Fullscreen Player UI Updates
+    const mobTitle = document.getElementById("mobFullTitle");
+    if (mobTitle) mobTitle.innerText = track.title;
+    const mobArtist = document.getElementById("mobFullArtist");
+    if (mobArtist) mobArtist.innerText = track.artist;
+    const mobCover = document.getElementById("mobFullCover");
+    if (mobCover) mobCover.innerHTML = track.cover || '💿';
 
     const videoPlayer = document.getElementById("videoPlayer");
     const vinylDisc = document.getElementById("vinylDisc");
@@ -601,19 +759,14 @@ function togglePlay() {
         audioCtx.resume();
     }
 
-    const btnPlay = document.getElementById("btnPlay");
-    const vinyl = document.getElementById("vinylDisc");
-
     if (isPlaying) {
         audioElement.pause();
         isPlaying = false;
-        btnPlay.innerHTML = '<i class="ph-fill ph-play-circle"></i>';
-        vinyl.classList.remove("playing");
+        updatePlayStateUI();
     } else {
         audioElement.play().then(() => {
             isPlaying = true;
-            btnPlay.innerHTML = '<i class="ph-fill ph-pause-circle"></i>';
-            vinyl.classList.add("playing");
+            updatePlayStateUI();
         }).catch(err => {
             console.error("Playback failed:", err);
         });
@@ -672,10 +825,14 @@ function toggleShuffle() {
     localStorage.setItem("nebula_shuffle", isShuffle);
     
     const btn = document.getElementById("btnShuffle");
+    const mobBtn = document.getElementById("mobFullBtnShuffle");
+    
     if (isShuffle) {
-        btn.classList.add("active");
+        if (btn) btn.classList.add("active");
+        if (mobBtn) mobBtn.classList.add("active");
     } else {
-        btn.classList.remove("active");
+        if (btn) btn.classList.remove("active");
+        if (mobBtn) mobBtn.classList.remove("active");
     }
 }
 
@@ -692,9 +849,7 @@ function handleTrackEnded() {
             isPlaying = false;
             audioElement.pause();
             audioElement.currentTime = 0;
-            document.getElementById("btnPlay").innerHTML = '<i class="ph-fill ph-play-circle"></i>';
-            const vinyl = document.getElementById("vinylDisc");
-            if (vinyl) vinyl.classList.remove("playing");
+            updatePlayStateUI();
             showFeedback("Конец плейлиста");
         } else {
             playNext();
@@ -719,7 +874,15 @@ function changeVolume(val) {
     }
     
     // UI Updates
-    document.getElementById("volumeVal").innerText = `${Math.round(value * 100)}%`;
+    const volText = `${Math.round(value * 100)}%`;
+    document.getElementById("volumeVal").innerText = volText;
+    
+    const volSlider = document.getElementById("volumeSlider");
+    if (volSlider) volSlider.value = value;
+    
+    const mobVolSlider = document.getElementById("mobFullVolumeSlider");
+    if (mobVolSlider) mobVolSlider.value = value;
+
     const btnMute = document.getElementById("btnMute");
     if (value === 0) {
         btnMute.innerHTML = '<i class="ph-fill ph-speaker-x"></i>';
@@ -734,16 +897,19 @@ function toggleMute() {
     isMuted = !isMuted;
     const btnMute = document.getElementById("btnMute");
     const volSlider = document.getElementById("volumeSlider");
+    const mobVolSlider = document.getElementById("mobFullVolumeSlider");
 
     if (isMuted) {
         btnMute.innerHTML = '<i class="ph-fill ph-speaker-x"></i>';
         if (volumeGain) volumeGain.gain.setValueAtTime(0, audioCtx.currentTime);
-        volSlider.value = 0;
+        if (volSlider) volSlider.value = 0;
+        if (mobVolSlider) mobVolSlider.value = 0;
         document.getElementById("volumeVal").innerText = "0%";
     } else {
         btnMute.innerHTML = '<i class="ph-fill ph-speaker-high"></i>';
         if (volumeGain) volumeGain.gain.setValueAtTime(volumeBeforeMute, audioCtx.currentTime);
-        volSlider.value = volumeBeforeMute;
+        if (volSlider) volSlider.value = volumeBeforeMute;
+        if (mobVolSlider) mobVolSlider.value = volumeBeforeMute;
         document.getElementById("volumeVal").innerText = `${Math.round(volumeBeforeMute * 100)}%`;
     }
 }
@@ -755,8 +921,16 @@ function updateTimeline() {
     if (duration === 0) return;
 
     const percent = (cur / duration) * 100;
+    
+    // Update Desktop progress bar
     document.getElementById("progressBarFill").style.width = `${percent}%`;
     document.getElementById("timeCurrent").innerText = formatTime(cur);
+    
+    // Update Mobile Full Player progress bar
+    const mobFill = document.getElementById("mobFullProgressBarFill");
+    if (mobFill) mobFill.style.width = `${percent}%`;
+    const mobTimeCurrent = document.getElementById("mobFullTimeCurrent");
+    if (mobTimeCurrent) mobTimeCurrent.innerText = formatTime(cur);
 
     // Throttled auto-save of current playback position (once every 1 second)
     if (Math.abs(cur - lastSaveTime) > 1) {
@@ -766,6 +940,9 @@ function updateTimeline() {
 
     // Sync lyrics highlight
     updateLyricsDisplay();
+    
+    // Update synced lyrics teaser inside the mobile screen player
+    updateMobLyricsTeaser();
 }
 
 // Click to Seek
@@ -2189,12 +2366,18 @@ async function toggleLikeCurrentTrack() {
 
 function updateLikeButtonIcon() {
     const btn = document.getElementById("btnLikeTrack");
-    if (!btn) return;
+    const mobBtn = document.getElementById("mobFullBtnLike");
     
     const track = playlist[currentTrackIdx];
     if (!track) {
-        btn.innerHTML = '<i class="ph-bold ph-heart"></i>';
-        btn.classList.remove("liked");
+        if (btn) {
+            btn.innerHTML = '<i class="ph-bold ph-heart"></i>';
+            btn.classList.remove("liked");
+        }
+        if (mobBtn) {
+            mobBtn.innerHTML = '<i class="ph-bold ph-heart"></i>';
+            mobBtn.classList.remove("liked");
+        }
         return;
     }
     
@@ -2207,12 +2390,16 @@ function updateLikeButtonIcon() {
         likes = JSON.parse(localStorage.getItem("nebula_likes") || "[]");
     }
     
-    if (likes.includes(trackId)) {
-        btn.innerHTML = '<i class="ph-fill ph-heart"></i>';
-        btn.classList.add("liked");
-    } else {
-        btn.innerHTML = '<i class="ph-bold ph-heart"></i>';
-        btn.classList.remove("liked");
+    const isLiked = likes.includes(trackId);
+    
+    if (btn) {
+        btn.innerHTML = isLiked ? '<i class="ph-fill ph-heart"></i>' : '<i class="ph-bold ph-heart"></i>';
+        if (isLiked) btn.classList.add("liked"); else btn.classList.remove("liked");
+    }
+    
+    if (mobBtn) {
+        mobBtn.innerHTML = isLiked ? '<i class="ph-fill ph-heart"></i>' : '<i class="ph-bold ph-heart"></i>';
+        if (isLiked) mobBtn.classList.add("liked"); else mobBtn.classList.remove("liked");
     }
 }
 
@@ -2301,8 +2488,7 @@ function playNextMyWaveTrack() {
     
     audioElement.play().then(() => {
         isPlaying = true;
-        document.getElementById("btnPlay").innerHTML = '<i class="ph-fill ph-pause-circle"></i>';
-        document.getElementById("vinylDisc").classList.add("playing");
+        updatePlayStateUI();
     }).catch(err => {
         console.error("Wave autoplay blocked by browser policies:", err);
     });
@@ -3235,17 +3421,17 @@ function updateTrackStatus(text, type = 'loading') {
 // Update loop/repeat button UI states programmatically
 function updateLoopButtonUI() {
     const btn = document.getElementById("btnLoop");
-    if (!btn) return;
+    const mobBtn = document.getElementById("mobFullBtnLoop");
     
     if (repeatMode === "none") {
-        btn.innerHTML = '<i class="ph-bold ph-repeat"></i>';
-        btn.classList.remove("active");
+        if (btn) { btn.innerHTML = '<i class="ph-bold ph-repeat"></i>'; btn.classList.remove("active"); }
+        if (mobBtn) { mobBtn.innerHTML = '<i class="ph-bold ph-repeat"></i>'; mobBtn.classList.remove("active"); }
     } else if (repeatMode === "playlist") {
-        btn.innerHTML = '<i class="ph-bold ph-repeat"></i>';
-        btn.classList.add("active");
+        if (btn) { btn.innerHTML = '<i class="ph-bold ph-repeat"></i>'; btn.classList.add("active"); }
+        if (mobBtn) { mobBtn.innerHTML = '<i class="ph-bold ph-repeat"></i>'; mobBtn.classList.add("active"); }
     } else if (repeatMode === "track") {
-        btn.innerHTML = '<i class="ph-bold ph-repeat-once"></i>';
-        btn.classList.add("active");
+        if (btn) { btn.innerHTML = '<i class="ph-bold ph-repeat-once"></i>'; btn.classList.add("active"); }
+        if (mobBtn) { mobBtn.innerHTML = '<i class="ph-bold ph-repeat-once"></i>'; mobBtn.classList.add("active"); }
     }
     
     if (audioElement) {

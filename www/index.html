@@ -617,6 +617,100 @@
                 </div>
             </div>
         </div>
+    <!-- Gorgeous Fullscreen Mobile Player Overlay (Spotify & Yandex Music style) -->
+    <div class="mobile-full-player" id="mobileFullPlayer">
+        <!-- Top bar: collapse and header -->
+        <div class="mobile-player-header">
+            <button class="player-back-btn" onclick="closeMobileFullPlayer()">
+                <i class="ph ph-caret-down"></i>
+            </button>
+            <div class="player-header-title">СЕЙЧАС ИГРАЕТ</div>
+            <button class="player-option-btn" onclick="openAccountModal()">
+                <i class="ph ph-user"></i>
+            </button>
+        </div>
+
+        <!-- Cover Art Section -->
+        <div class="mobile-player-cover-container">
+            <div class="mobile-player-cover" id="mobFullCover">💿</div>
+        </div>
+
+        <!-- Track Info Section -->
+        <div class="mobile-player-track-info">
+            <div class="mobile-player-meta">
+                <h2 id="mobFullTitle">Название трека</h2>
+                <p id="mobFullArtist">Исполнитель</p>
+            </div>
+            <button class="mobile-player-like-btn" id="mobFullBtnLike" onclick="toggleLikeCurrentTrack()">
+                <i class="ph ph-heart"></i>
+            </button>
+        </div>
+
+        <!-- Timeline / Progress Section -->
+        <div class="mobile-player-timeline-section">
+            <div class="mobile-player-progress-bar-wrapper" id="mobFullProgressBarWrapper">
+                <div class="mobile-player-progress-bar-fill" id="mobFullProgressBarFill" style="width: 0%;"></div>
+            </div>
+            <div class="mobile-player-timestamps">
+                <span id="mobFullTimeCurrent">0:00</span>
+                <span id="mobFullTimeTotal">0:00</span>
+            </div>
+        </div>
+
+        <!-- Primary Playback Controls -->
+        <div class="mobile-player-controls-section">
+            <!-- Shuffle -->
+            <button class="mob-ctrl-btn" id="mobFullBtnShuffle" onclick="toggleShuffle()" title="Перемешать">
+                <i class="ph ph-shuffle"></i>
+            </button>
+            
+            <!-- Previous -->
+            <button class="mob-ctrl-btn step-btn" id="mobFullBtnPrev" onclick="playPrevious()" title="Назад">
+                <i class="ph-fill ph-skip-back"></i>
+            </button>
+            
+            <!-- Play/Pause -->
+            <button class="mob-ctrl-btn play-btn" id="mobFullBtnPlay" onclick="togglePlay()" title="Воспроизвести">
+                <i class="ph-fill ph-play-circle"></i>
+            </button>
+            
+            <!-- Next -->
+            <button class="mob-ctrl-btn step-btn" id="mobFullBtnNext" onclick="playNext()" title="Вперед">
+                <i class="ph-fill ph-skip-forward"></i>
+            </button>
+            
+            <!-- Repeat -->
+            <button class="mob-ctrl-btn" id="mobFullBtnLoop" onclick="toggleLoop()" title="Повтор">
+                <i class="ph ph-repeat"></i>
+            </button>
+        </div>
+
+        <!-- Bottom Utility / Extras Section -->
+        <div class="mobile-player-utilities">
+            <!-- Dislike button -->
+            <button class="mob-util-btn dislike-btn" id="mobFullBtnDislike" onclick="dislikeCurrentTrack()" title="Больше не играть">
+                <i class="ph ph-thumbs-down"></i>
+            </button>
+            
+            <!-- Volume indicator / Slider -->
+            <div class="mob-volume-container">
+                <i class="ph ph-speaker-high" style="font-size: 1.1rem; color: var(--text-muted);"></i>
+                <input type="range" class="mob-volume-slider" id="mobFullVolumeSlider" min="0" max="1" step="0.05" value="0.7" oninput="changeVolume(this.value)">
+            </div>
+            
+            <!-- Effects Drawer Button -->
+            <button class="mob-util-btn" onclick="toggleEffectsPanel(); closeMobileFullPlayer();" title="Эквалайзер">
+                <i class="ph ph-sliders"></i>
+            </button>
+        </div>
+        
+        <!-- Synced Lyrics Preview Drawer -->
+        <div class="mobile-player-lyrics-teaser" onclick="showSection('lyrics'); closeMobileFullPlayer();">
+            <div class="teaser-header">
+                <i class="ph ph-text-align-left"></i> ТЕКСТ ПЕСНИ
+            </div>
+            <p id="mobFullLyricsTeaser">Нажмите, чтобы открыть синхронный текст песни...</p>
+        </div>
     </div>
     
     <!-- Sleek Glassy Bottom Navigation for Mobile -->
