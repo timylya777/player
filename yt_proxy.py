@@ -164,7 +164,9 @@ def download_and_cache_song(video_id, title, artist):
         
     print(f"[CACHE] Caching track {video_id} ('{title}') in background...")
     cmd = [
-        "yt-dlp",
+        sys.executable,
+        "-m",
+        "yt_dlp",
         "-f", "bestaudio",
         "--extract-audio",
         "--audio-format", "mp3",
