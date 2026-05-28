@@ -981,7 +981,10 @@ body.is-electron .effects-sidebar {
     padding: 0 12px;
     user-select: none;
     z-index: 9999;
-    position: relative;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
 }
 
 body.is-electron .custom-titlebar {

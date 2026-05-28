@@ -2528,7 +2528,7 @@ function renderCustomPlaylistsNav() {
         a.href = "#";
         a.className = "nav-item";
         a.id = `navPlaylist_${name}`;
-        a.innerText = '<i class="ph-bold ph-music-notes"></i> ' + name;
+        a.innerHTML = '<i class="ph-bold ph-music-notes"></i> ' + name;
         a.onclick = (e) => {
             e.preventDefault();
             // Highlight active nav
