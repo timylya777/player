@@ -103,6 +103,9 @@ const AVATARS = ["👽", "🪐", "🚀", "🛸", "👾", "🤖", "⭐", "👩‍
 let currentAvatarIdx = 0;
 let lastSaveTime = 0;
 
+// Server API Configuration (for mobile/Capacitor support)
+let API_BASE_URL = localStorage.getItem("nebula_api_base_url") || "${API_BASE_URL}";
+
 // Web Audio API Nodes
 let audioCtx = null;
 let audioElement = null;
@@ -1270,7 +1273,7 @@ async function loadLyricsForTrack(track) {
 
     try {
         // Construct query parameters
-        let url = `http://localhost:9001/api/lyrics?title=${encodeURIComponent(track.title)}&artist=${encodeURIComponent(track.artist)}`;
+        let url = `${API_BASE_URL}/api/lyrics?title=${encodeURIComponent(track.title)}&artist=${encodeURIComponent(track.artist)}`;
         if (track.youtubeId) {
             url += `&id=${encodeURIComponent(track.youtubeId)}`;
         }
@@ -1613,12 +1616,51 @@ function openAccountModal() {
     if (modal) {
         modal.classList.add("active");
         updateProfileUI();
+        
+        // Populate current API Base URL settings
+        const apiInp = document.getElementById("inputApiBaseUrl");
+        if (apiInp) {
+            apiInp.value = API_BASE_URL;
+        }
     }
 }
 
 function closeAccountModal() {
     const modal = document.getElementById("accountModal");
     if (modal) modal.classList.remove("active");
+}
+
+function saveConnectionSettings() {
+    const apiInp = document.getElementById("inputApiBaseUrl");
+    if (!apiInp) return;
+    
+    let url = apiInp.value.trim();
+    if (!url) {
+        url = "http://localhost:9001";
+    }
+    
+    // Auto-prepend http:// if missing
+    if (!url.startsWith("http://") && !url.startsWith("https://")) {
+        url = "http://" + url;
+    }
+    
+    // Remove trailing slash if present
+    if (url.endsWith("/")) {
+        url = url.slice(0, -1);
+    }
+    
+    API_BASE_URL = url;
+    localStorage.setItem("nebula_api_base_url", url);
+    
+    // Also update YT_PROXY_URL
+    if (typeof YT_PROXY_URL !== "undefined") {
+        YT_PROXY_URL = url;
+    }
+    
+    showFeedback(`Адрес подключения изменен: ${url}`);
+    
+    // Trigger sync to fetch with the new url
+    syncUserDataFromServer();
 }
 
 async function handleAuth(type) {
@@ -1636,7 +1678,7 @@ async function handleAuth(type) {
 
     try {
         const endpoint = type === 'register' ? '/api/auth/register' : '/api/auth/login';
-        const res = await fetch(`http://localhost:9001${endpoint}`, {
+        const res = await fetch(`${API_BASE_URL}${endpoint}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ username, password })
@@ -1694,7 +1736,7 @@ async function syncLocalLikesToAccount() {
                        { url: trackUrl, title: "Неизвестный трек", artist: "Избранное", cover: '<i class="ph-fill ph-heart"></i>' };
                         
         try {
-            await fetch('http://localhost:9001/api/favorites', {
+            await fetch(`${API_BASE_URL}/api/favorites`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -1724,7 +1766,7 @@ async function cycleAvatar() {
     const newAvatar = AVATARS[currentAvatarIdx];
     
     try {
-        const res = await fetch('http://localhost:9001/api/auth/avatar', {
+        const res = await fetch(`${API_BASE_URL}/api/auth/avatar`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -1746,7 +1788,7 @@ async function syncUserDataFromServer() {
     const userToFetch = loggedInUser || getOrCreateGuestId();
     try {
         // Fetch favorites
-        const favRes = await fetch(`http://localhost:9001/api/favorites?username=${encodeURIComponent(userToFetch)}`);
+        const favRes = await fetch(`${API_BASE_URL}/api/favorites?username=${encodeURIComponent(userToFetch)}`);
         if (favRes.ok) {
             const data = await favRes.json();
             if (loggedInUser) {
@@ -1769,7 +1811,7 @@ async function syncUserDataFromServer() {
         
         // Fetch playlists
         if (loggedInUser) {
-            const plRes = await fetch(`http://localhost:9001/api/playlists?username=${encodeURIComponent(loggedInUser)}`);
+            const plRes = await fetch(`${API_BASE_URL}/api/playlists?username=${encodeURIComponent(loggedInUser)}`);
             if (plRes.ok) {
                 const data = await plRes.json();
                 customPlaylists = data.playlists;
@@ -1792,7 +1834,7 @@ async function syncUserDataFromServer() {
         if (currentPlaylistName === 'library') {
             const hubCount = document.getElementById('hubFavoritesCount');
             if (hubCount) {
-                const favRes2 = await fetch(`http://localhost:9001/api/favorites?username=${encodeURIComponent(userToFetch)}`);
+                const favRes2 = await fetch(`${API_BASE_URL}/api/favorites?username=${encodeURIComponent(userToFetch)}`);
                 if (favRes2.ok) {
                     const favData2 = await favRes2.json();
                     hubCount.innerText = `${favData2.favorites.length} треков`;
@@ -1918,7 +1960,7 @@ function showFavorites() {
     const userToFetch = loggedInUser || getOrCreateGuestId();
     
     // Load favorites from memory/storage/server
-    fetch(`http://localhost:9001/api/favorites?username=${encodeURIComponent(userToFetch)}`)
+    fetch(`${API_BASE_URL}/api/favorites?username=${encodeURIComponent(userToFetch)}`)
         .then(res => res.json())
         .then(data => {
             playlist = data.favorites;
@@ -1965,7 +2007,7 @@ async function toggleLikeCurrentTrack() {
     const userToUse = loggedInUser || getOrCreateGuestId();
     
     try {
-        const res = await fetch('http://localhost:9001/api/favorites', {
+        const res = await fetch(`${API_BASE_URL}/api/favorites`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -2242,7 +2284,7 @@ function handleSearch(query) {
 // YouTube Music Integration via Piped API
 // ==========================================================================
 // YouTube Music Integration via Local Proxy (yt-dlp)
-const YT_PROXY_URL = "http://localhost:9001";
+const YT_PROXY_URL = API_BASE_URL;
 
 let ytNextPage = null; // Pagination not supported by proxy yet
 let ytLastQuery = "";
@@ -2591,7 +2633,7 @@ async function submitCreatePlaylist() {
     
     if (loggedInUser) {
         try {
-            const res = await fetch('http://localhost:9001/api/playlists', {
+            const res = await fetch(`${API_BASE_URL}/api/playlists`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ username: loggedInUser, name })
@@ -2670,7 +2712,7 @@ function showLibraryDashboard() {
     
     const userToFetch = typeof loggedInUser !== 'undefined' ? loggedInUser : getOrCreateGuestId();
     if (userToFetch) {
-        fetch(`http://localhost:9001/api/favorites?username=${encodeURIComponent(userToFetch)}`)
+        fetch(`${API_BASE_URL}/api/favorites?username=${encodeURIComponent(userToFetch)}`)
             .then(res => res.json())
             .then(data => {
                 const hubCount = document.getElementById('hubFavoritesCount');
@@ -2782,7 +2824,7 @@ async function confirmAddToPlaylist(listName, trackIdx) {
     
     if (loggedInUser) {
         try {
-            const res = await fetch('http://localhost:9001/api/playlists/add', {
+            const res = await fetch(`${API_BASE_URL}/api/playlists/add`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ username: loggedInUser, name: listName, track })
@@ -2813,7 +2855,7 @@ async function removeFromCustomPlaylist(trackIdx) {
     
     if (loggedInUser) {
         try {
-            const res = await fetch('http://localhost:9001/api/playlists/remove', {
+            const res = await fetch(`${API_BASE_URL}/api/playlists/remove`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ username: loggedInUser, name: currentPlaylistName, track_index: trackIdx })
@@ -2878,7 +2920,7 @@ function leaveRoom() {
 async function pollRoomState() {
     if (!currentRoomId) return;
     try {
-        const res = await fetch(`http://localhost:9001/api/room?id=${encodeURIComponent(currentRoomId)}`);
+        const res = await fetch(`${API_BASE_URL}/api/room?id=${encodeURIComponent(currentRoomId)}`);
         if (!res.ok) return;
         const state = await res.json();
         
@@ -2931,7 +2973,7 @@ async function pushRoomState() {
     };
     
     try {
-        await fetch(`http://localhost:9001/api/room?id=${encodeURIComponent(currentRoomId)}`, {
+        await fetch(`${API_BASE_URL}/api/room?id=${encodeURIComponent(currentRoomId)}`, {
             method: 'POST',
             body: JSON.stringify(state)
         });
@@ -3139,14 +3181,14 @@ async function loadHomeRecommendations(category, btnElement) {
     if (tracksContainer) tracksContainer.style.opacity = "0.3";
     
     try {
-        const res = await fetch(`http://localhost:9001/api/recommendations?category=${encodeURIComponent(category)}`);
+        const res = await fetch(`${API_BASE_URL}/api/recommendations?category=${encodeURIComponent(category)}`);
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = await res.json();
         
         homeRecommendations = (data.items || []).map(item => ({
             title: item.title,
             artist: item.artist,
-            url: `http://localhost:9001/api/play?id=${item.id}`,
+            url: `${API_BASE_URL}/api/play?id=${item.id}`,
             cover: "🎵",
             isYoutube: true,
             youtubeId: item.id,

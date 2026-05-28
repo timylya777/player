@@ -567,6 +567,18 @@
                         <button class="action-btn btn-logout" onclick="handleLogout()">Выйти из аккаунта</button>
                     </div>
                 </div>
+                
+                <div class="sidebar-divider" style="margin: 20px 0 15px 0; background: rgba(255,255,255,0.06); height: 1px;"></div>
+                
+                <!-- Connection Settings Section -->
+                <div class="connection-settings-section" style="margin-top: 15px;">
+                    <h4 style="font-size: 0.9rem; font-weight: 600; color: #fff; margin-bottom: 8px; display: flex; align-items: center; gap: 8px;"><i class="ph ph-wifi-high" style="color: var(--accent-secondary);"></i> Настройки подключения</h4>
+                    <p class="modal-desc" style="font-size: 0.72rem; margin-bottom: 12px; color: var(--text-muted); line-height: 1.4;">Укажите IP-адрес компьютера, где запущен yt_proxy.py, для доступа с мобильных устройств (например, http://192.168.1.100:9001):</p>
+                    <div class="input-group" style="display: flex; gap: 8px; align-items: center; margin-bottom: 0;">
+                        <input type="text" id="inputApiBaseUrl" placeholder="http://localhost:9001" style="flex-grow: 1; padding: 10px 14px; background: rgba(0,0,0,0.3); border: 1px solid var(--border-color); border-radius: var(--radius-sm); color: #fff; outline: none; font-size: 0.85rem;">
+                        <button class="auth-btn btn-login" style="padding: 10px 18px; font-size: 0.8rem; margin: 0; min-width: auto; height: 38px; flex-shrink: 0; display: flex; align-items: center; justify-content: center;" onclick="saveConnectionSettings()">Применить</button>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
