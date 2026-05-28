@@ -432,10 +432,10 @@ function loadTrack(idx, seekToTime = null) {
     document.getElementById("trackArtist").innerText = track.artist;
     
     const albumCover = document.getElementById("albumCover");
-    if (albumCover) albumCover.innerText = track.cover || '<i class="ph-fill ph-music-notes"></i>';
+    if (albumCover) albumCover.innerHTML = track.cover || '<i class="ph-fill ph-music-notes"></i>';
     
     const barCover = document.getElementById("barCover");
-    if (barCover) barCover.innerText = track.cover || '<i class="ph-fill ph-music-notes"></i>';
+    if (barCover) barCover.innerHTML = track.cover || '<i class="ph-fill ph-music-notes"></i>';
 
     const videoPlayer = document.getElementById("videoPlayer");
     const vinylDisc = document.getElementById("vinylDisc");
@@ -1787,7 +1787,7 @@ function updateProfileUI() {
     if (loggedInUser && userAccounts[loggedInUser]) {
         const user = userAccounts[loggedInUser];
         
-        if (avatarHeader) avatarHeader.innerText = user.avatar;
+        if (avatarHeader) avatarHeader.innerHTML = user.avatar;
         if (nicknameHeader) nicknameHeader.innerText = loggedInUser;
         if (statusHeader) statusHeader.innerText = "Облако активно";
         
@@ -1795,7 +1795,7 @@ function updateProfileUI() {
         if (profileView) profileView.style.display = "block";
         
         if (profileUsername) profileUsername.innerText = loggedInUser;
-        if (profileAvatarBig) profileAvatarBig.innerText = user.avatar;
+        if (profileAvatarBig) profileAvatarBig.innerHTML = user.avatar;
         
         const dateStr = user.lastSynced ? new Date(user.lastSynced).toLocaleTimeString() : "никогда";
         if (profileSyncDate) profileSyncDate.innerText = `Синхронизировано: ${dateStr}`;
@@ -2065,10 +2065,10 @@ function playNextMyWaveTrack() {
     document.getElementById("trackArtist").innerText = waveTrack.artist;
     
     const albumCover = document.getElementById("albumCover");
-    if (albumCover) albumCover.innerText = waveTrack.cover;
+    if (albumCover) albumCover.innerHTML = waveTrack.cover;
     
     const barCover = document.getElementById("barCover");
-    if (barCover) barCover.innerText = waveTrack.cover;
+    if (barCover) barCover.innerHTML = waveTrack.cover;
 
     document.getElementById("progressBarFill").style.width = "0%";
     document.getElementById("timeCurrent").innerText = "0:00";
