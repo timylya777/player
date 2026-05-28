@@ -1228,11 +1228,45 @@ async function loadLyricsForTrack(track) {
     containers.forEach(container => {
         if (!container) return;
         container.innerHTML = `
-            <div style="text-align:center; padding: 40px; color: var(--accent-primary); display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%;">
-                <i class="ph ph-spinner ph-spin" style="font-size: 3rem; margin-bottom: 15px; text-shadow: 0 0 15px var(--glow-color);"></i>
-                <p style="font-weight: 600; font-size: 1.1rem; color: #fff;">Поиск текста в LRCLib / YouTube...</p>
+            <div class="lyrics-loader">
+                <div class="loader-visual-wrapper">
+                    <div class="loader-ring loader-ring-outer"></div>
+                    <div class="loader-ring loader-ring-inner"></div>
+                    <div class="loader-core"></div>
+                </div>
+                <div class="loader-status-text">Загрузка текста</div>
+                <div class="loader-details-text">Синхронизация с базой данных...</div>
+                <div class="loader-wave">
+                    <div class="loader-bar"></div>
+                    <div class="loader-bar"></div>
+                    <div class="loader-bar"></div>
+                    <div class="loader-bar"></div>
+                    <div class="loader-bar"></div>
+                    <div class="loader-bar"></div>
+                    <div class="loader-bar"></div>
+                </div>
             </div>`;
     });
+
+    const loadingStatuses = [
+        "Поиск сигнатур трека в LRCLib...",
+        "Установка связи с прокси-сервером...",
+        "Сканирование аудиопотока YouTube...",
+        "Декодирование субтитров LRC...",
+        "Фильтрация таймингов караоке...",
+        "Подготовка визуализации текста..."
+    ];
+    let statusIdx = 0;
+    const statusInterval = setInterval(() => {
+        containers.forEach(container => {
+            if (!container) return;
+            const details = container.querySelector(".loader-details-text");
+            if (details) {
+                statusIdx = (statusIdx + 1) % loadingStatuses.length;
+                details.innerText = loadingStatuses[statusIdx];
+            }
+        });
+    }, 1000);
 
     try {
         // Construct query parameters
@@ -1242,6 +1276,7 @@ async function loadLyricsForTrack(track) {
         }
 
         const res = await fetch(url);
+        clearInterval(statusInterval);
         if (!res.ok) throw new Error("Network response was not ok");
         
         const data = await res.json();
@@ -1261,6 +1296,7 @@ async function loadLyricsForTrack(track) {
             });
         }
     } catch (e) {
+        clearInterval(statusInterval);
         console.error("Error fetching lyrics:", e);
         containers.forEach(container => {
             if (!container) return;
