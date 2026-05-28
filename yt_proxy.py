@@ -488,7 +488,11 @@ class YTProxyHandler(BaseHTTPRequestHandler):
 
     def _handle_lyrics(self, params):
         video_id = params.get("id", [""])[0]
-        if not video_id: return self._send_json({"error": "Missing id"}, 400)
+        passed_title = params.get("title", [""])[0]
+        passed_artist = params.get("artist", [""])[0]
+        
+        if not video_id and not passed_title: 
+            return self._send_json({"error": "Missing id or title"}, 400)
         
         import glob
         import os
@@ -497,10 +501,14 @@ class YTProxyHandler(BaseHTTPRequestHandler):
         import urllib.request
         import urllib.parse
         
-        # 1. Fetch metadata using the existing yt-dlp cache
-        info = yt_dlp_get_audio_url(video_id)
-        title = info.get("title", "")
-        artist = info.get("artist", "")
+        title = passed_title
+        artist = passed_artist
+        
+        # 1. Fetch metadata using the existing yt-dlp cache if video_id is provided
+        if video_id:
+            info = yt_dlp_get_audio_url(video_id)
+            title = title or info.get("title", "")
+            artist = artist or info.get("artist", "")
         
         lyrics = None
         

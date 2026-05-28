@@ -1219,14 +1219,58 @@ function parseLRC(lrcText) {
     return result;
 }
 
-function loadLyricsForTrack(track) {
-    if (track.lrc) {
-        currentLyrics = parseLRC(track.lrc);
-    } else {
-        currentLyrics = generateProceduralLyrics(track);
-    }
+async function loadLyricsForTrack(track) {
+    currentLyrics = [];
+    
+    const containers = [document.getElementById("lyricsContainer"), document.getElementById("sectionLyricsContainer")];
+    
+    // Set loading UI status
+    containers.forEach(container => {
+        if (!container) return;
+        container.innerHTML = `
+            <div style="text-align:center; padding: 40px; color: var(--accent-primary); display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%;">
+                <i class="ph ph-spinner ph-spin" style="font-size: 3rem; margin-bottom: 15px; text-shadow: 0 0 15px var(--glow-color);"></i>
+                <p style="font-weight: 600; font-size: 1.1rem; color: #fff;">Поиск текста в LRCLib / YouTube...</p>
+            </div>`;
+    });
 
-    renderLyricsMarkup();
+    try {
+        // Construct query parameters
+        let url = `http://localhost:9001/api/lyrics?title=${encodeURIComponent(track.title)}&artist=${encodeURIComponent(track.artist)}`;
+        if (track.youtubeId) {
+            url += `&id=${encodeURIComponent(track.youtubeId)}`;
+        }
+
+        const res = await fetch(url);
+        if (!res.ok) throw new Error("Network response was not ok");
+        
+        const data = await res.json();
+        
+        if (data.lyrics && data.lyrics.length > 0) {
+            currentLyrics = data.lyrics;
+            renderLyricsMarkup();
+        } else {
+            // No lyrics found
+            containers.forEach(container => {
+                if (!container) return;
+                container.innerHTML = `
+                    <div style="text-align:center; padding: 40px; color: var(--text-muted); display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%;">
+                        <i class="ph-bold ph-text-align-left" style="font-size: 3rem; margin-bottom: 15px; opacity: 0.3;"></i>
+                        <p style="font-size: 1rem;">Текст не найден</p>
+                    </div>`;
+            });
+        }
+    } catch (e) {
+        console.error("Error fetching lyrics:", e);
+        containers.forEach(container => {
+            if (!container) return;
+            container.innerHTML = `
+                <div style="text-align:center; padding: 40px; color: #ff3b30; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%;">
+                    <i class="ph-bold ph-warning" style="font-size: 3rem; margin-bottom: 15px;"></i>
+                    <p style="font-size: 1rem;">Ошибка загрузки текста</p>
+                </div>`;
+        });
+    }
 }
 
 function renderLyricsMarkup() {
@@ -1234,44 +1278,11 @@ function renderLyricsMarkup() {
     containers.forEach(container => {
         if (!container) return;
         
-        if (currentLyrics.length === 0) {
-            container.innerHTML = `<p class="lyric-line-fallback">Текст песни отсутствует</p>`;
-            return;
-        }
+        if (currentLyrics.length === 0) return; // Handled by loading states
 
         container.innerHTML = currentLyrics.map((line, index) => {
             return `<p class="lyric-line" data-time="${line.time}" onclick="seekToLyricTime(${line.time})">${line.text}</p>`;
         }).join("");
-    });
-}
-
-function generateProceduralLyrics(track) {
-    const lines = [
-        "🛸 Настройка телеметрической связи с Nebula Player...",
-        "🪐 Сканирование звукового пространства вокруг корабля...",
-        "✨ Захват звуковой дорожки завершен успешно.",
-        "🛰️ Установлена частота вещания: 44.1 кГц.",
-        "🚀 Ускорение сквозь космическую пыль...",
-        "🌌 Пролетаем скопление Плеяды. Визуализация частот активна.",
-        "💫 Глубокий бас сотрясает обшивку нашего корабля.",
-        "⚡ Эффекты реверберации создают эхо далеких планет.",
-        "🌠 Звездный дождь за окном мерцает в такт мелодии.",
-        "🪐 Мы входим в кольца Сатурна. Громкость 100%.",
-        "🔮 Музыкальное ядро работает на максимальной мощности.",
-        "🛰️ Синхронизация систем завершена. Полет продолжается.",
-        "🎆 Вспышка сверхновой освещает наш путь!",
-        "🚀 Подготовка к переходу в гиперпространство...",
-        "🛸 Миссия выполнена. Космос слушает Nebula Player."
-    ];
-
-    const duration = audioElement.duration || 180;
-    const step = duration / (lines.length + 1);
-    
-    return lines.map((text, idx) => {
-        return {
-            time: (idx + 1) * step,
-            text: text
-        };
     });
 }
 
@@ -1850,13 +1861,14 @@ function getOrCreateGuestId() {
 }
 
 function showFavorites() {
+    currentPlaylistName = 'favorites';
+    showSection('playlist');
+    
     // Highlight active nav in sidebar
     document.querySelectorAll(".sidebar-nav .nav-item").forEach(n => n.classList.remove("active"));
     const favNav = document.getElementById("navFavorites");
     if (favNav) favNav.classList.add("active");
 
-    showSection('playlist');
-    
     // Hide dashboard, show tracklist + back button
     const dashboard = document.getElementById('libraryDashboard');
     const tracksList = document.getElementById('libraryTracksList');
@@ -1866,8 +1878,6 @@ function showFavorites() {
     if (tracksList) tracksList.style.display = 'block';
     if (backBtn) backBtn.style.display = 'inline-flex';
     if (headerTitle) headerTitle.innerText = 'Любимые треки';
-    
-    currentPlaylistName = 'favorites';
     
     const userToFetch = loggedInUser || getOrCreateGuestId();
     
@@ -2603,13 +2613,6 @@ function showCustomPlaylist(name) {
 // ========================================================================
 
 function showLibraryDashboard() {
-    showSection('playlist');
-    
-    // Highlight correct nav
-    document.querySelectorAll(".sidebar-nav .nav-item").forEach(n => n.classList.remove("active"));
-    const navPlaylist = document.getElementById('navPlaylist');
-    if (navPlaylist) navPlaylist.classList.add('active');
-    
     currentPlaylistName = 'library';
     
     const dashboard = document.getElementById('libraryDashboard');
@@ -2617,32 +2620,39 @@ function showLibraryDashboard() {
     const backBtn = document.getElementById('btnBackToLibrary');
     const headerTitle = document.getElementById('playlistHeaderTitle');
     
-    // Show dashboard, hide tracklist and back button
+    // Мгновенное переключение без перерисовки тяжелых списков
     if (dashboard) dashboard.style.display = 'block';
     if (tracksList) tracksList.style.display = 'none';
     if (backBtn) backBtn.style.display = 'none';
     if (headerTitle) headerTitle.innerText = 'Моя Медиатека';
+
+    showSection('playlist');
     
-    // Update favorites count
-    const userToFetch = loggedInUser || getOrCreateGuestId();
-    fetch(`http://localhost:9001/api/favorites?username=${encodeURIComponent(userToFetch)}`)
-        .then(res => res.json())
-        .then(data => {
-            const hubCount = document.getElementById('hubFavoritesCount');
-            if (hubCount) hubCount.innerText = `${data.favorites.length} треков`;
-        })
-        .catch(() => {
-            const likes = JSON.parse(localStorage.getItem("nebula_likes") || "[]");
-            const hubCount = document.getElementById('hubFavoritesCount');
-            if (hubCount) hubCount.innerText = `${likes.length} треков`;
-        });
+    document.querySelectorAll(".sidebar-nav .nav-item").forEach(n => n.classList.remove("active"));
+    const navPlaylist = document.getElementById('navPlaylist');
+    if (navPlaylist) navPlaylist.classList.add('active');
     
-    // Render playlists grid
-    renderDashboardPlaylists();
+    const userToFetch = typeof loggedInUser !== 'undefined' ? loggedInUser : getOrCreateGuestId();
+    if (userToFetch) {
+        fetch(`http://localhost:9001/api/favorites?username=${encodeURIComponent(userToFetch)}`)
+            .then(res => res.json())
+            .then(data => {
+                const hubCount = document.getElementById('hubFavoritesCount');
+                if (hubCount && data.favorites) hubCount.innerText = `${data.favorites.length} треков`;
+            })
+            .catch(() => {
+                const likes = JSON.parse(localStorage.getItem("nebula_likes") || "[]");
+                const hubCount = document.getElementById('hubFavoritesCount');
+                if (hubCount) hubCount.innerText = `${likes.length} треков`;
+            });
+    }
     
-    // Load local library tracks into the main playlist for playback
-    playlist = [...DEFAULT_PLAYLIST];
-    renderPlaylist();
+    if (typeof renderDashboardPlaylists === 'function') {
+        renderDashboardPlaylists();
+    }
+    
+    // Мы БОЛЬШЕ НЕ перезаписываем playlist и НЕ вызываем renderPlaylist().
+    // Это сохранит вашу текущую очередь воспроизведения и уберет "провис".
 }
 
 function renderDashboardPlaylists() {
