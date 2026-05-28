@@ -1,4 +1,4 @@
-const CACHE_NAME = 'nebula-player-cache-v9';
+const CACHE_NAME = 'nebula-player-cache-v15';
 const PRE_CACHE_ASSETS = [
   './',
   './index.html',

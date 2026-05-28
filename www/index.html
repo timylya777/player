@@ -20,6 +20,7 @@
     <meta name="theme-color" content="#0a0a0a">
     <link rel="icon" type="image/png" href="icon.png">
     <link rel="apple-touch-icon" href="icon.png">
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
 </head>
 <body class="theme-synthwave">
     <!-- Custom Electron Titlebar -->
@@ -45,23 +46,35 @@
         <!-- Sidebar Navigation -->
         <aside class="sidebar">
             <div class="sidebar-brand">
-                <span class="brand-logo">✨</span>
+                <span class="brand-logo"><i class="ph-fill ph-sparkle"></i></span>
                 <h2>Nebula Player</h2>
             </div>
             
             <nav class="sidebar-nav">
-                <a href="#" class="nav-item active" id="navHome" onclick="showSection('home')">🏠 Главная</a>
-                <a href="#" class="nav-item" id="navYoutube" onclick="showSection('youtube')">🎵 YouTube Music</a>
-                <a href="#" class="nav-item" id="navPlaylist" onclick="showSection('playlist')">📁 Моя медиатека</a>
-                <a href="#" class="nav-item" id="navVisualizer" onclick="showSection('visualizer')">📊 Визуализатор</a>
-                <a href="#" class="nav-item" id="navLyrics" onclick="showSection('lyrics')">💬 Текст песни</a>
+                <a href="#" class="nav-item active" id="navHome" onclick="showSection('home')"><i class="ph ph-house"></i> Главная</a>
+                <a href="#" class="nav-item" id="navYoutube" onclick="showSection('youtube')"><i class="ph ph-magnifying-glass"></i> Поиск</a>
+                <a href="#" class="nav-item" id="navPlaylist" onclick="showSection('playlist')"><i class="ph ph-folder"></i> Моя медиатека</a>
+                <a href="#" class="nav-item" id="navFavorites" onclick="showFavorites()"><i class="ph-fill ph-heart"></i> Любимое</a>
+                <a href="#" class="nav-item" id="navVisualizer" onclick="showSection('visualizer')"><i class="ph ph-chart-bar"></i> Визуализатор</a>
+                <a href="#" class="nav-item" id="navLyrics" onclick="showSection('lyrics')"><i class="ph ph-text-align-left"></i> Текст песни</a>
+                <a href="#" class="nav-item" id="navRoom" onclick="showSection('room')"><i class="ph ph-users"></i> Совместное прослушивание</a>
             </nav>
+            
+            <div class="sidebar-divider"></div>
+            
+            <!-- Custom Playlists Section in Sidebar -->
+            <div class="sidebar-playlists-section">
+                <h5 class="sidebar-section-title"><i class="ph ph-music-notes-plus" style="margin-right: 6px; color: var(--primary);"></i>Мои плейлисты</h5>
+                <nav class="sidebar-nav sidebar-playlists-nav" id="customPlaylistsNav">
+                    <!-- Dynamically populated by JS -->
+                </nav>
+            </div>
             
             <div class="sidebar-divider"></div>
             
             <!-- My Wave Sidebar Trigger -->
             <div class="sidebar-wave-card" id="sidebarWaveCard" onclick="toggleMyWave()">
-                <span class="wave-card-icon">🌊</span>
+                <span class="wave-card-icon"><i class="ph ph-waves"></i></span>
                 <div class="wave-card-details">
                     <h4 id="waveCardTitle">Моя Волна</h4>
                     <p id="waveCardSub">Бесконечный поток</p>
@@ -75,7 +88,7 @@
             <header class="content-header">
                 <!-- Search bar -->
                 <div class="header-search">
-                    <span>🔍</span>
+                    <span><i class="ph ph-magnifying-glass"></i></span>
                     <input type="text" id="searchInput" placeholder="Поиск треков или исполнителей..." oninput="handleSearch(this.value)">
                 </div>
                 
@@ -103,20 +116,78 @@
             </header>
 
             <!-- Main Sections (Only one visible at a time) -->
+            <!-- Room / Co-listening Section -->
+            <section class="section-container" id="sectionRoom" style="display: none;">
+                <div class="tracks-table-container" style="max-width: 600px; margin: 0 auto;">
+                    <h3><i class="ph ph-users"></i> Совместное прослушивание</h3>
+                    <p style="color: var(--text-muted); margin-bottom: 20px;">Слушайте музыку синхронно с друзьями! Введите ID комнаты, чтобы подключиться или создать новую.</p>
+                    <div style="display: flex; gap: 10px; margin-bottom: 20px;">
+                        <input type="text" id="roomIdInput" placeholder="Например: my-party-123" style="flex: 1; padding: 12px; border-radius: 8px; border: 1px solid var(--border-color); background: rgba(0,0,0,0.5); color: #fff;">
+                        <button onclick="joinRoom()" style="padding: 12px 24px; border-radius: 8px; background: var(--primary); color: #fff; border: none; cursor: pointer; font-weight: bold;"><i class="ph-bold ph-sign-in"></i> Подключиться</button>
+                    </div>
+                    <div id="roomStatus" style="padding: 15px; border-radius: 8px; background: rgba(255,255,255,0.05); text-align: center; color: var(--text-secondary);">
+                        Вы не подключены к комнате.
+                    </div>
+                    <div id="roomControls" style="display: none; margin-top: 20px; text-align: center;">
+                        <button onclick="leaveRoom()" style="padding: 10px 20px; border-radius: 8px; background: #ff4757; color: #fff; border: none; cursor: pointer;"><i class="ph-bold ph-sign-out"></i> Покинуть комнату</button>
+                    </div>
+                </div>
+            </section>
+    
             
             <!-- 1. Home Section -->
             <section class="section-container" id="sectionHome">
-                <!-- Hero Wave Banner -->
+                <!-- Hero Wave Banner (Cyberpunk theme) -->
                 <div class="hero-wave-banner" id="btnMyWave" onclick="toggleMyWave()">
-                    <span class="wave-banner-badge">РЕКОМЕНДУЕМ</span>
+                    <span class="wave-banner-badge">УМНЫЙ ПОТОК</span>
                     <h2>Моя Волна</h2>
-                    <p>Бесконечный умный поток музыки на основе ваших лайков и прослушиваний. Нажмите, чтобы включить космический поток!</p>
-                    <button class="wave-play-btn" id="btnPlayWave">ЗАПУСТИТЬ</button>
+                    <p>Бесконечный поток музыки на основе ваших лайков, автоматически сохраняемый локально и защищенный от удаления.</p>
+                    <button class="wave-play-btn" id="btnPlayWave"><i class="ph-fill ph-waves"></i> ЗАПУСТИТЬ</button>
                 </div>
 
-                <!-- Popular Tracks list -->
-                <div class="tracks-table-container">
-                    <h3>Популярные треки</h3>
+                <!-- YT Music Recommendations Dashboard -->
+                <div class="recommendations-dashboard">
+                    <h3><i class="ph-fill ph-sparkle" style="color: var(--primary);"></i> Рекомендации YouTube Music</h3>
+                    <p class="rec-sub" style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 20px;">Индивидуальные подборки, динамически генерируемые из облака</p>
+                    
+                    <!-- Genre Categories Grid -->
+                    <div class="recommendations-categories-grid">
+                        <div class="rec-cat-card active" onclick="loadHomeRecommendations('pop', this)" id="rec-cat-pop">
+                            <div class="rec-cat-glow" style="background: radial-gradient(circle, rgba(255, 0, 70, 0.4) 0%, transparent 70%);"></div>
+                            <span class="rec-cat-icon"><i class="ph ph-flame"></i></span>
+                            <span class="rec-cat-title">Популярные хиты</span>
+                        </div>
+                        <div class="rec-cat-card" onclick="loadHomeRecommendations('synthwave', this)" id="rec-cat-synthwave">
+                            <div class="rec-cat-glow" style="background: radial-gradient(circle, rgba(0, 242, 254, 0.4) 0%, transparent 70%);"></div>
+                            <span class="rec-cat-icon"><i class="ph ph-rocket-launch"></i></span>
+                            <span class="rec-cat-title">Сити поп / Синтвейв</span>
+                        </div>
+                        <div class="rec-cat-card" onclick="loadHomeRecommendations('lofi', this)" id="rec-cat-lofi">
+                            <div class="rec-cat-glow" style="background: radial-gradient(circle, rgba(189, 0, 255, 0.4) 0%, transparent 70%);"></div>
+                            <span class="rec-cat-icon"><i class="ph ph-coffee"></i></span>
+                            <span class="rec-cat-title">Лоу-фай расслабление</span>
+                        </div>
+                        <div class="rec-cat-card" onclick="loadHomeRecommendations('cyberpunk', this)" id="rec-cat-cyberpunk">
+                            <div class="rec-cat-glow" style="background: radial-gradient(circle, rgba(255, 230, 0, 0.4) 0%, transparent 70%);"></div>
+                            <span class="rec-cat-icon"><i class="ph ph-terminal-window"></i></span>
+                            <span class="rec-cat-title">Киберпанк Драйв</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Curated Recommendations Tracklist -->
+                <div class="tracks-table-container" style="margin-top: 30px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                        <h3 id="recTracksHeader"><i class="ph ph-list-numbers"></i> Рекомендованные треки</h3>
+                        <button class="auth-btn btn-login" style="padding: 6px 16px; font-size: 0.8rem; background: rgba(255,255,255,0.05); cursor: pointer;" onclick="playAllRecommendations()"><i class="ph ph-play"></i> Воспроизвести все</button>
+                    </div>
+                    
+                    <!-- Dynamic Loader for Recommendations -->
+                    <div class="yt-loading" id="recLoading" style="display: none; padding: 20px 0;">
+                        <div class="yt-spinner"></div>
+                        <span>Загрузка рекомендаций YouTube Music...</span>
+                    </div>
+
                     <div class="tracks-list" id="tracksList">
                         <!-- Loaded dynamically via JS -->
                     </div>
@@ -126,22 +197,63 @@
             <!-- 2. Playlist / Media Library Section -->
             <section class="section-container" id="sectionPlaylist" style="display: none;">
                 <div class="tracks-table-container">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
-                        <h3>Моя Медиатека</h3>
+                    <!-- Playlist Title & Back Navigation -->
+                    <div class="playlist-header-nav" style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; gap: 15px;">
+                        <div style="display: flex; align-items: center; gap: 12px;">
+                            <button id="btnBackToLibrary" class="auth-btn btn-login" style="padding: 6px 12px; font-size: 0.8rem; background: rgba(255,255,255,0.05); display: none;" onclick="showLibraryDashboard()"><i class="ph ph-arrow-left"></i> Назад</button>
+                            <h3 id="playlistHeaderTitle">Моя Медиатека</h3>
+                        </div>
                         <span class="playlist-counter" id="playlistCounter">0 треков</span>
                     </div>
 
-                    <!-- Drag and Drop Zone -->
-                    <div class="upload-dropzone" id="uploadDropzone" style="margin-bottom: 24px;">
-                        <div class="dropzone-content">
-                            <span class="upload-icon">📥</span>
-                            <p class="dropzone-title">Перетащите сюда .mp3 файлы</p>
-                            <p class="dropzone-subtitle">или нажмите для выбора с диска</p>
+                    <!-- Unified Library Dashboard (Only visible when currentPlaylistName === 'library') -->
+                    <div id="libraryDashboard">
+                        <!-- Quick Hub Cards -->
+                        <div class="library-hub-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-bottom: 24px;">
+                            <!-- Favorites Card -->
+                            <div class="lib-hub-card favorites" onclick="showFavorites()">
+                                <div class="hub-card-glow" style="background: radial-gradient(circle, rgba(255, 0, 70, 0.4) 0%, transparent 70%);"></div>
+                                <span class="hub-card-icon"><i class="ph-fill ph-heart"></i></span>
+                                <div class="hub-card-info">
+                                    <h4>Любимые треки</h4>
+                                    <p id="hubFavoritesCount">0 треков</p>
+                                </div>
+                            </div>
+                            
+                            <!-- Create Playlist Card -->
+                            <div class="lib-hub-card create-new" onclick="createNewPlaylist()">
+                                <div class="hub-card-glow" style="background: radial-gradient(circle, rgba(0, 242, 254, 0.4) 0%, transparent 70%);"></div>
+                                <span class="hub-card-icon"><i class="ph ph-plus-circle"></i></span>
+                                <div class="hub-card-info">
+                                    <h4>Создать плейлист</h4>
+                                    <p>Организуйте музыку</p>
+                                </div>
+                            </div>
                         </div>
-                        <input type="file" id="fileInput" accept="audio/*" multiple style="display: none;">
+
+                        <!-- Custom Playlists Grid -->
+                        <div class="library-playlists-section" style="margin-bottom: 30px;">
+                            <h4 style="font-size: 1.1rem; font-weight: 600; color: #fff; margin-bottom: 15px; display: flex; align-items: center; gap: 8px;"><i class="ph ph-folder" style="color: var(--primary);"></i> Мои плейлисты</h4>
+                            <div class="playlists-grid" id="dashboardPlaylistsGrid">
+                                <!-- Dynamically populated custom playlists -->
+                            </div>
+                        </div>
+
+                        <!-- Local Files Import Header -->
+                        <h4 style="font-size: 1.1rem; font-weight: 600; color: #fff; margin-bottom: 15px; display: flex; align-items: center; gap: 8px;"><i class="ph ph-hard-drive" style="color: var(--primary);"></i> Локальные MP3 файлы</h4>
+                        
+                        <!-- Drag and Drop Zone -->
+                        <div class="upload-dropzone" id="uploadDropzone" style="margin-bottom: 24px;">
+                            <div class="dropzone-content">
+                                <span class="upload-icon"><i class="ph ph-download-simple"></i></span>
+                                <p class="dropzone-title">Перетащите сюда .mp3 файлы</p>
+                                <p class="dropzone-subtitle">или нажмите для выбора с диска</p>
+                            </div>
+                            <input type="file" id="fileInput" accept="audio/*" multiple style="display: none;">
+                        </div>
                     </div>
 
-                    <!-- Library Tracks list -->
+                    <!-- Tracks list (Used for showing tracks of whatever playlist is active) -->
                     <div class="tracks-list" id="libraryTracksList">
                         <!-- Loaded dynamically via JS -->
                     </div>
@@ -209,8 +321,8 @@
             <!-- 5. YouTube Music Section -->
             <section class="section-container" id="sectionYoutube" style="display: none;">
                 <div class="yt-section-header">
-                    <h3>🎵 YouTube Music</h3>
-                    <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 4px;">Ищите и слушайте миллионы треков прямо из YouTube</p>
+                    <h3><i class="ph ph-magnifying-glass"></i> Глобальный Поиск</h3>
+                    <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 4px;">Ищите музыку по всем доступным интеграциям и локальным ресурсам</p>
                 </div>
 
                 <!-- YouTube Search Bar -->
@@ -218,6 +330,14 @@
                     <span class="yt-search-icon">🔍</span>
                     <input type="text" id="ytSearchInput" placeholder="Введите название песни или исполнителя..." onkeydown="if(event.key==='Enter') ytSearch()">
                     <button class="yt-search-btn" id="ytSearchBtn" onclick="ytSearch()">Найти</button>
+                </div>
+
+                <!-- Search Source Filters -->
+                <div class="search-filters-bar">
+                    <button class="filter-pill active" onclick="setSearchFilter('all', this)" id="filter-all"><i class="ph ph-music-notes"></i> Все источники</button>
+                    <button class="filter-pill" onclick="setSearchFilter('youtube', this)" id="filter-youtube"><i class="ph ph-youtube-logo"></i> YouTube Music</button>
+                    <button class="filter-pill" onclick="setSearchFilter('nebula', this)" id="filter-nebula"><i class="ph ph-sparkle"></i> Nebula Cloud</button>
+                    <button class="filter-pill" onclick="setSearchFilter('local', this)" id="filter-local"><i class="ph ph-hard-drive"></i> Локальные файлы</button>
                 </div>
 
                 <!-- Loading Indicator -->
@@ -250,19 +370,20 @@
             <div class="bar-track-meta">
                 <div class="bar-track-title" id="trackTitle">Название трека</div>
                 <div class="bar-track-artist" id="trackArtist">Исполнитель</div>
+                <div id="trackStatus" class="bar-track-status" style="display:none;"></div>
             </div>
-            <button class="track-action-btn btn-like" id="btnLikeTrack" onclick="toggleLikeCurrentTrack()" title="В избранное">🤍</button>
-            <button class="track-action-btn btn-dislike" id="btnDislikeTrack" onclick="dislikeCurrentTrack()" title="Больше не играть">👎</button>
         </div>
 
         <!-- Center: Playback Controls & Timeline Progress -->
         <div class="bar-player-controls">
             <div class="playback-controls">
-                <button class="ctrl-btn" id="btnShuffle" onclick="toggleShuffle()" title="Перемешать">🔀</button>
-                <button class="ctrl-btn ctrl-btn-step" id="btnPrev" onclick="playPrevious()" title="Назад">⏮️</button>
-                <button class="ctrl-btn ctrl-btn-play" id="btnPlay" onclick="togglePlay()" title="Воспроизвести">▶️</button>
-                <button class="ctrl-btn ctrl-btn-step" id="btnNext" onclick="playNext()" title="Вперед">⏭️</button>
-                <button class="ctrl-btn" id="btnLoop" onclick="toggleLoop()" title="Повтор">🔁</button>
+                <button class="ctrl-btn ctrl-btn-dislike" id="btnDislikeTrack" onclick="dislikeCurrentTrack()" title="Больше не играть"><i class="ph-bold ph-thumbs-down"></i></button>
+                <button class="ctrl-btn" id="btnShuffle" onclick="toggleShuffle()" title="Перемешать"><i class="ph-bold ph-shuffle"></i></button>
+                <button class="ctrl-btn ctrl-btn-step" id="btnPrev" onclick="playPrevious()" title="Назад"><i class="ph-fill ph-skip-back"></i></button>
+                <button class="ctrl-btn ctrl-btn-play" id="btnPlay" onclick="togglePlay()" title="Воспроизвести"><i class="ph-fill ph-play-circle"></i></button>
+                <button class="ctrl-btn ctrl-btn-step" id="btnNext" onclick="playNext()" title="Вперед"><i class="ph-fill ph-skip-forward"></i></button>
+                <button class="ctrl-btn" id="btnLoop" onclick="toggleLoop()" title="Повтор"><i class="ph-bold ph-repeat"></i></button>
+                <button class="ctrl-btn ctrl-btn-like" id="btnLikeTrack" onclick="toggleLikeCurrentTrack()" title="В избранное"><i class="ph-bold ph-heart"></i></button>
             </div>
             
             <div class="timeline-container">
@@ -277,18 +398,18 @@
         <!-- Right: Volume Slider & slide-out Effects trigger -->
         <div class="bar-extra-controls">
             <div class="volume-container">
-                <button class="volume-mute-btn" id="btnMute" onclick="toggleMute()">🔊</button>
+                <button class="volume-mute-btn" id="btnMute" onclick="toggleMute()"><i class="ph-fill ph-speaker-high"></i></button>
                 <input type="range" class="volume-slider" id="volumeSlider" min="0" max="1" step="0.05" value="0.7" oninput="changeVolume(this.value)">
                 <span class="volume-val font-tech" id="volumeVal">70%</span>
             </div>
-            <button class="bar-panel-toggle" id="btnToggleEQ" onclick="toggleEffectsPanel()" title="Эквалайзер FX">🎛️</button>
+            <button class="bar-panel-toggle" id="btnToggleEQ" onclick="toggleEffectsPanel()" title="Эквалайзер FX"><i class="ph-bold ph-sliders"></i></button>
         </div>
     </footer>
 
     <!-- Slide-out Effects Sidebar Panel (Right drawer) -->
     <aside class="effects-sidebar" id="effectsSidebar">
         <div class="panel-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 10px;">
-            <h2 style="font-size: 1rem;">🎛️ Эквалайзер FX</h2>
+            <h2 style="font-size: 1rem;"><i class="ph-bold ph-sliders"></i> Эквалайзер FX</h2>
             <span class="status-indicator" style="font-size: 0.65rem; color: var(--accent-secondary); font-weight: 800; font-family: 'Orbitron', sans-serif;">АКТИВЕН</span>
         </div>
         
@@ -450,6 +571,42 @@
         </div>
     </div>
 
+    
+    <!-- Create Playlist Modal -->
+    <div class="modal-overlay" id="createPlaylistModal" style="display: none;">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3><i class="ph ph-plus-circle"></i> Создать плейлист</h3>
+                <button class="modal-close-btn" onclick="document.getElementById('createPlaylistModal').style.display='none'">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="input-group">
+                    <label>Название плейлиста</label>
+                    <input type="text" id="inputNewPlaylistName" placeholder="Например: Рок хиты" onkeydown="if(event.key==='Enter') submitCreatePlaylist()">
+                </div>
+                <div class="modal-actions" style="margin-top: 15px;">
+                    <button class="auth-btn btn-login" onclick="submitCreatePlaylist()">Создать</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add to Playlist Modal -->
+    <div class="modal-overlay" id="addToPlaylistModal" style="display: none;">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3><i class="ph ph-list-plus"></i> Добавить в плейлист</h3>
+                <button class="modal-close-btn" onclick="document.getElementById('addToPlaylistModal').style.display='none'">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p class="modal-desc" style="margin-bottom: 10px;">Выберите плейлист для сохранения трека:</p>
+                <div id="addToPlaylistList" style="display: flex; flex-direction: column; gap: 8px; max-height: 200px; overflow-y: auto;">
+                    <!-- Populated by JS -->
+                </div>
+            </div>
+        </div>
+    </div>
+    
     <!-- Script loading -->
     <script src="app.js"></script>
 </body>
