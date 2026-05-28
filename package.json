@@ -1,0 +1,55 @@
+{
+  "name": "nebula-player",
+  "version": "1.0.0",
+  "description": "Nebula Music Player & Audio Visualizer",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "web": "python -m http.server 9000",
+    "build:win": "electron-builder --win portable",
+    "cap:sync": "cap sync",
+    "cap:add:android": "cap add android",
+    "cap:add:ios": "cap add ios",
+    "cap:open:android": "cap open android",
+    "cap:open:ios": "cap open ios"
+  },
+  "keywords": [
+    "music",
+    "player",
+    "visualizer",
+    "electron",
+    "pwa",
+    "capacitor",
+    "mobile",
+    "windows"
+  ],
+  "author": "Antigravity CLI",
+  "license": "ISC",
+  "dependencies": {
+    "@capacitor/core": "^6.0.0"
+  },
+  "devDependencies": {
+    "electron": "^31.0.0",
+    "electron-builder": "^24.13.3",
+    "@capacitor/cli": "^6.0.0",
+    "@capacitor/android": "^6.0.0",
+    "@capacitor/ios": "^6.0.0"
+  },
+  "build": {
+    "appId": "com.nebulaplayer.app",
+    "productName": "Nebula Player",
+    "directories": {
+      "output": "dist-win"
+    },
+    "win": {
+      "target": "portable",
+      "icon": "www/icon.png"
+    },
+    "files": [
+      "www/**/*",
+      "main.js",
+      "preload.js",
+      "package.json"
+    ]
+  }
+}

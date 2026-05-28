@@ -1,0 +1,8 @@
+{
+  "appId": "com.nebulaplayer.app",
+  "appName": "Nebula Player",
+  "webDir": "www",
+  "server": {
+    "androidScheme": "https"
+  }
+}

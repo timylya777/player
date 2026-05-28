@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Nebula Player — интерактивный космический музыкальный проигрыватель с Canvas-визуализацией частот, эквалайзером эффектов (Bass Boost, Reverb) и возможностью загрузки локальных аудиофайлов.">
+    <title>Nebula Player — Аудио-визуализатор и эквалайзер</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700;900&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+    
+    <!-- PWA Settings -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#ff007f">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="theme-color" content="#0a0a0a">
+    <link rel="icon" type="image/png" href="icon.png">
+    <link rel="apple-touch-icon" href="icon.png">
+</head>
+<body class="theme-synthwave">
+    <!-- Custom Electron Titlebar -->
+    <div class="custom-titlebar">
+        <div class="titlebar-drag-area">
+            <span class="titlebar-logo">✨</span>
+            <span class="titlebar-title">Nebula Player</span>
+        </div>
+        <div class="titlebar-controls">
+            <button class="titlebar-btn btn-minimize" id="titleMinimize" title="Свернуть">&#9472;</button>
+            <button class="titlebar-btn btn-maximize" id="titleMaximize" title="Развернуть">&#9633;</button>
+            <button class="titlebar-btn btn-close" id="titleClose" title="Закрыть">&times;</button>
+        </div>
+    </div>
+
+    <!-- Starry Background Overlay -->
+    <div class="starry-overlay" id="starryOverlay"></div>
+    <div class="glow-orb orb-primary" id="orbPrimary"></div>
+    <div class="glow-orb orb-secondary" id="orbSecondary"></div>
+
+    <!-- Spotify-style App Layout Grid -->
+    <div class="app-layout">
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar">
+            <div class="sidebar-brand">
+                <span class="brand-logo">✨</span>
+                <h2>Nebula Player</h2>
+            </div>
+            
+            <nav class="sidebar-nav">
+                <a href="#" class="nav-item active" id="navHome" onclick="showSection('home')">🏠 Главная</a>
+                <a href="#" class="nav-item" id="navYoutube" onclick="showSection('youtube')">🎵 YouTube Music</a>
+                <a href="#" class="nav-item" id="navPlaylist" onclick="showSection('playlist')">📁 Моя медиатека</a>
+                <a href="#" class="nav-item" id="navVisualizer" onclick="showSection('visualizer')">📊 Визуализатор</a>
+                <a href="#" class="nav-item" id="navLyrics" onclick="showSection('lyrics')">💬 Текст песни</a>
+            </nav>
+            
+            <div class="sidebar-divider"></div>
+            
+            <!-- My Wave Sidebar Trigger -->
+            <div class="sidebar-wave-card" id="sidebarWaveCard" onclick="toggleMyWave()">
+                <span class="wave-card-icon">🌊</span>
+                <div class="wave-card-details">
+                    <h4 id="waveCardTitle">Моя Волна</h4>
+                    <p id="waveCardSub">Бесконечный поток</p>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content Section Wrapper -->
+        <main class="main-content">
+            <!-- Content Header -->
+            <header class="content-header">
+                <!-- Search bar -->
+                <div class="header-search">
+                    <span>🔍</span>
+                    <input type="text" id="searchInput" placeholder="Поиск треков или исполнителей..." oninput="handleSearch(this.value)">
+                </div>
+                
+                <div class="header-right">
+                    <!-- Theme Customizer -->
+                    <div class="theme-selector-wrapper">
+                        <span class="control-label">ТЕМА:</span>
+                        <div class="theme-buttons">
+                            <button class="theme-btn btn-synthwave active" onclick="setTheme('synthwave')" title="Synthwave Neon"></button>
+                            <button class="theme-btn btn-cyberpunk" onclick="setTheme('cyberpunk')" title="Cyberpunk Violet"></button>
+                            <button class="theme-btn btn-emerald" onclick="setTheme('emerald')" title="Emerald Deep"></button>
+                            <button class="theme-btn btn-obsidian" onclick="setTheme('obsidian')" title="Obsidian Midnight"></button>
+                        </div>
+                    </div>
+
+                    <!-- User Account Control Widget -->
+                    <div class="user-profile-widget" id="userProfileWidget" onclick="openAccountModal()">
+                        <div class="user-avatar" id="userAvatar">👽</div>
+                        <div class="user-meta-info">
+                            <span class="user-nickname" id="userNickname">Гость</span>
+                            <span class="sync-status" id="syncStatus">Нажмите для входа</span>
+                        </div>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Main Sections (Only one visible at a time) -->
+            
+            <!-- 1. Home Section -->
+            <section class="section-container" id="sectionHome">
+                <!-- Hero Wave Banner -->
+                <div class="hero-wave-banner" id="btnMyWave" onclick="toggleMyWave()">
+                    <span class="wave-banner-badge">РЕКОМЕНДУЕМ</span>
+                    <h2>Моя Волна</h2>
+                    <p>Бесконечный умный поток музыки на основе ваших лайков и прослушиваний. Нажмите, чтобы включить космический поток!</p>
+                    <button class="wave-play-btn" id="btnPlayWave">ЗАПУСТИТЬ</button>
+                </div>
+
+                <!-- Popular Tracks list -->
+                <div class="tracks-table-container">
+                    <h3>Популярные треки</h3>
+                    <div class="tracks-list" id="tracksList">
+                        <!-- Loaded dynamically via JS -->
+                    </div>
+                </div>
+            </section>
+
+            <!-- 2. Playlist / Media Library Section -->
+            <section class="section-container" id="sectionPlaylist" style="display: none;">
+                <div class="tracks-table-container">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+                        <h3>Моя Медиатека</h3>
+                        <span class="playlist-counter" id="playlistCounter">0 треков</span>
+                    </div>
+
+                    <!-- Drag and Drop Zone -->
+                    <div class="upload-dropzone" id="uploadDropzone" style="margin-bottom: 24px;">
+                        <div class="dropzone-content">
+                            <span class="upload-icon">📥</span>
+                            <p class="dropzone-title">Перетащите сюда .mp3 файлы</p>
+                            <p class="dropzone-subtitle">или нажмите для выбора с диска</p>
+                        </div>
+                        <input type="file" id="fileInput" accept="audio/*" multiple style="display: none;">
+                    </div>
+
+                    <!-- Library Tracks list -->
+                    <div class="tracks-list" id="libraryTracksList">
+                        <!-- Loaded dynamically via JS -->
+                    </div>
+                </div>
+            </section>
+
+            <!-- 3. Visualizer Section -->
+            <section class="section-container" id="sectionVisualizer" style="display: none;">
+                <div class="visualizer-screen-wrapper">
+                    <!-- Visualizer Selection Tab -->
+                    <div class="visualizer-tabs">
+                        <button class="viz-tab active" id="tabBars" onclick="setVizMode('bars')">Частотные бары</button>
+                        <button class="viz-tab" id="tabWave" onclick="setVizMode('wave')">Круговая волна</button>
+                        <button class="viz-tab" id="tabRetro" onclick="setVizMode('retro')">Звездный ретро-мост</button>
+                        <button class="viz-tab" id="tabLyrics" onclick="setVizMode('lyrics')">Текст (LRC)</button>
+                    </div>
+
+                    <!-- Visualizer Canvas Container -->
+                    <div class="viz-canvas-container">
+                        <!-- Real-time Visualizer Canvas -->
+                        <canvas class="visualizer-canvas" id="visualizerCanvas"></canvas>
+
+                        <!-- Synced Karaoke Lyrics Viewer (embedded) -->
+                        <div class="lyrics-container-wrapper" id="lyricsContainerWrapper" style="display: none; z-index: 10; width: 100%; height: 100%; max-height: 100%; overflow: hidden; position: relative;">
+                            <div class="lyrics-header-controls" style="position: absolute; top: 12px; right: 12px; z-index: 20;">
+                                <button class="lrc-upload-btn" onclick="document.getElementById('lrcFileInput').click()" style="background: rgba(255,255,255,0.08); border: 1px solid var(--border-color); color: var(--text-main); padding: 6px 12px; border-radius: 20px; font-size: 0.75rem; cursor: pointer;">📂 Загрузить .LRC</button>
+                                <input type="file" id="lrcFileInput" accept=".lrc" style="display: none;" onchange="handleLrcUpload(event)">
+                            </div>
+                            <div class="lyrics-scroll-box" id="lyricsContainer">
+                                <p class="lyric-line-fallback">Загрузка текста песни...</p>
+                            </div>
+                        </div>
+
+                        <!-- Pulse Album Cover/Vinyl -->
+                        <div class="album-art-wrapper" id="albumArtWrapper">
+                            <div class="vinyl-disc" id="vinylDisc">
+                                <div class="vinyl-center"></div>
+                                <div class="album-cover" id="albumCover">✨</div>
+                            </div>
+                            <video id="videoPlayer" class="video-player" crossorigin="anonymous" playsinline style="display: none; border-radius: 50%; width: 100%; height: 100%; object-fit: cover; position: absolute; top: 0; left: 0; z-index: 10;"></video>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 4. Lyrics Section -->
+            <section class="section-container" id="sectionLyrics" style="display: none;">
+                <div class="tracks-table-container" style="height: 100%; display: flex; flex-direction: column;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                        <h3>Синхронный Текст Песни</h3>
+                        <div>
+                            <button class="lrc-upload-btn" onclick="document.getElementById('lrcFileInputLyricsSection').click()" style="background: rgba(255,255,255,0.05); border: 1px solid var(--border-color); color: var(--text-main); padding: 8px 16px; border-radius: 20px; font-size: 0.8rem; cursor: pointer; transition: all 0.2s;">📂 Загрузить .LRC</button>
+                            <input type="file" id="lrcFileInputLyricsSection" accept=".lrc" style="display: none;" onchange="handleLrcUpload(event)">
+                        </div>
+                    </div>
+                    
+                    <div class="lyrics-screen-wrapper" style="flex-grow: 1; height: 55vh;">
+                        <div class="lyrics-scroll-box" id="sectionLyricsContainer">
+                            <p class="lyric-line-fallback">Загрузка текста песни...</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 5. YouTube Music Section -->
+            <section class="section-container" id="sectionYoutube" style="display: none;">
+                <div class="yt-section-header">
+                    <h3>🎵 YouTube Music</h3>
+                    <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 4px;">Ищите и слушайте миллионы треков прямо из YouTube</p>
+                </div>
+
+                <!-- YouTube Search Bar -->
+                <div class="yt-search-bar">
+                    <span class="yt-search-icon">🔍</span>
+                    <input type="text" id="ytSearchInput" placeholder="Введите название песни или исполнителя..." onkeydown="if(event.key==='Enter') ytSearch()">
+                    <button class="yt-search-btn" id="ytSearchBtn" onclick="ytSearch()">Найти</button>
+                </div>
+
+                <!-- Loading Indicator -->
+                <div class="yt-loading" id="ytLoading" style="display: none;">
+                    <div class="yt-spinner"></div>
+                    <span>Поиск на YouTube...</span>
+                </div>
+
+                <!-- Error Message -->
+                <div class="yt-error" id="ytError" style="display: none;"></div>
+
+                <!-- Search Results Grid -->
+                <div class="yt-results-grid" id="ytResultsGrid">
+                    <!-- Populated dynamically -->
+                </div>
+
+                <!-- Load More -->
+                <div class="yt-load-more" id="ytLoadMore" style="display: none;">
+                    <button class="wave-play-btn" onclick="ytLoadNextPage()">Загрузить ещё</button>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Sticky Bottom Player Bar (Spotify style) -->
+    <footer class="bottom-player-bar">
+        <!-- Left: Current Track Details -->
+        <div class="bar-track-info">
+            <div class="bar-album-cover" id="barCover">💿</div>
+            <div class="bar-track-meta">
+                <div class="bar-track-title" id="trackTitle">Название трека</div>
+                <div class="bar-track-artist" id="trackArtist">Исполнитель</div>
+            </div>
+            <button class="track-action-btn btn-like" id="btnLikeTrack" onclick="toggleLikeCurrentTrack()" title="В избранное">🤍</button>
+            <button class="track-action-btn btn-dislike" id="btnDislikeTrack" onclick="dislikeCurrentTrack()" title="Больше не играть">👎</button>
+        </div>
+
+        <!-- Center: Playback Controls & Timeline Progress -->
+        <div class="bar-player-controls">
+            <div class="playback-controls">
+                <button class="ctrl-btn" id="btnShuffle" onclick="toggleShuffle()" title="Перемешать">🔀</button>
+                <button class="ctrl-btn ctrl-btn-step" id="btnPrev" onclick="playPrevious()" title="Назад">⏮️</button>
+                <button class="ctrl-btn ctrl-btn-play" id="btnPlay" onclick="togglePlay()" title="Воспроизвести">▶️</button>
+                <button class="ctrl-btn ctrl-btn-step" id="btnNext" onclick="playNext()" title="Вперед">⏭️</button>
+                <button class="ctrl-btn" id="btnLoop" onclick="toggleLoop()" title="Повтор">🔁</button>
+            </div>
+            
+            <div class="timeline-container">
+                <span class="time-stamp" id="timeCurrent">0:00</span>
+                <div class="progress-bar-wrapper" id="progressBarWrapper">
+                    <div class="progress-bar-fill" id="progressBarFill" style="width: 0%;"></div>
+                </div>
+                <span class="time-stamp" id="timeTotal">0:00</span>
+            </div>
+        </div>
+
+        <!-- Right: Volume Slider & slide-out Effects trigger -->
+        <div class="bar-extra-controls">
+            <div class="volume-container">
+                <button class="volume-mute-btn" id="btnMute" onclick="toggleMute()">🔊</button>
+                <input type="range" class="volume-slider" id="volumeSlider" min="0" max="1" step="0.05" value="0.7" oninput="changeVolume(this.value)">
+                <span class="volume-val font-tech" id="volumeVal">70%</span>
+            </div>
+            <button class="bar-panel-toggle" id="btnToggleEQ" onclick="toggleEffectsPanel()" title="Эквалайзер FX">🎛️</button>
+        </div>
+    </footer>
+
+    <!-- Slide-out Effects Sidebar Panel (Right drawer) -->
+    <aside class="effects-sidebar" id="effectsSidebar">
+        <div class="panel-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 10px;">
+            <h2 style="font-size: 1rem;">🎛️ Эквалайзер FX</h2>
+            <span class="status-indicator" style="font-size: 0.65rem; color: var(--accent-secondary); font-weight: 800; font-family: 'Orbitron', sans-serif;">АКТИВЕН</span>
+        </div>
+        
+        <div class="effects-list">
+            <!-- Bass Boost -->
+            <div class="fx-group">
+                <div class="fx-labels">
+                    <span class="fx-name">🔊 BASS BOOST (НЧ)</span>
+                    <span class="fx-value font-tech" id="valBass">0 dB</span>
+                </div>
+                <input type="range" class="fx-slider" id="sliderBass" min="-10" max="20" step="1" value="0" oninput="updateBass(this.value)">
+                <p class="fx-desc" style="font-size: 0.65rem; color: var(--text-muted);">Усиление низких басовых частот (80 Гц).</p>
+            </div>
+
+            <!-- Treble Boost -->
+            <div class="fx-group" style="margin-top: 14px;">
+                <div class="fx-labels">
+                    <span class="fx-name">🎸 TREBLE (ВЧ)</span>
+                    <span class="fx-value font-tech" id="valTreble">0 dB</span>
+                </div>
+                <input type="range" class="fx-slider" id="sliderTreble" min="-10" max="20" step="1" value="0" oninput="updateTreble(this.value)">
+                <p class="fx-desc" style="font-size: 0.65rem; color: var(--text-muted);">Управление яркостью высоких частот (10 кГц).</p>
+            </div>
+
+            <!-- Spatial Reverb -->
+            <div class="fx-group" style="margin-top: 14px;">
+                <div class="fx-labels">
+                    <span class="fx-name">🌌 REVERB (Эхо/Пространство)</span>
+                    <span class="fx-value font-tech" id="valReverb">0%</span>
+                </div>
+                <input type="range" class="fx-slider" id="sliderReverb" min="0" max="100" step="5" value="0" oninput="updateReverb(this.value)">
+                <p class="fx-desc" style="font-size: 0.65rem; color: var(--text-muted);">Добавляет глубину звука космической пещеры.</p>
+            </div>
+
+            <!-- Equalizer Presets -->
+            <div class="fx-group border-top" style="margin-top: 18px;">
+                <span class="fx-name">🎚️ ПРЕСЕТЫ ЭКВАЛАЙЗЕРА</span>
+                <div class="preset-eq-buttons">
+                    <button class="eq-btn active" id="eqPresetNormal" onclick="setEQPreset('normal')">Сброс</button>
+                    <button class="eq-btn" id="eqPresetBass" onclick="setEQPreset('bass')">Bass Boost</button>
+                    <button class="eq-btn" id="eqPresetVoice" onclick="setEQPreset('voice')">Яркие ВЧ</button>
+                    <button class="eq-btn" id="eqPresetLofi" onclick="setEQPreset('lofi')">Lofi Тепло</button>
+                </div>
+            </div>
+
+            <!-- Visualizer sensitivity multiplier -->
+            <div class="fx-group border-top" style="margin-top: 18px;">
+                <div class="fx-labels">
+                    <span class="fx-name">⚡ ЧУВСТВИТЕЛЬНОСТЬ</span>
+                    <span class="fx-value font-tech" id="valSensitivity">x1.0</span>
+                </div>
+                <input type="range" class="fx-slider" id="sliderSensitivity" min="0.5" max="2.0" step="0.1" value="1.0" oninput="changeSensitivity(this.value)">
+                <p class="fx-desc" style="font-size: 0.65rem; color: var(--text-muted);">Высота шкалы визуализатора спектра.</p>
+            </div>
+
+            <!-- Sleep Timer -->
+            <div class="fx-group border-top" style="margin-top: 18px;">
+                <div class="fx-labels">
+                    <span class="fx-name">⏰ ТАЙМЕР СНА</span>
+                    <span class="fx-value font-tech" id="valSleepTimer">Выкл</span>
+                </div>
+                <div class="timer-buttons">
+                    <button class="timer-btn active" id="btnTimerOff" onclick="setSleepTimer(0)">Выкл</button>
+                    <button class="timer-btn" id="btnTimer5" onclick="setSleepTimer(5)">5м</button>
+                    <button class="timer-btn" id="btnTimer15" onclick="setSleepTimer(15)">15м</button>
+                    <button class="timer-btn" id="btnTimer30" onclick="setSleepTimer(30)">30м</button>
+                    <button class="timer-btn" id="btnTimer60" onclick="setSleepTimer(60)">60м</button>
+                </div>
+            </div>
+
+            <!-- Speed & Pitch Controls -->
+            <div class="fx-group border-top" style="margin-top: 18px;">
+                <div class="fx-labels">
+                    <span class="fx-name">⚡ СКОРОСТЬ &amp; ВЫСОТА ТОНА</span>
+                    <span class="fx-value font-tech" id="valSpeed">x1.00</span>
+                </div>
+                <input type="range" class="fx-slider" id="sliderSpeed" min="0.5" max="2.0" step="0.05" value="1.0" oninput="changeSpeed(this.value)">
+                
+                <div class="checkbox-row" style="margin-top: 8px;">
+                    <label class="custom-chk-label" style="font-size: 0.7rem; color: var(--text-muted); cursor: pointer; display: flex; align-items: center; gap: 6px;">
+                        <input type="checkbox" id="chkPreservePitch" checked onchange="togglePreservePitch(this.checked)">
+                        Сохранять высоту тона
+                    </label>
+                </div>
+                
+                <div class="preset-eq-buttons" style="margin-top: 10px;">
+                    <button class="eq-btn active" id="speedPresetNormal" onclick="setSpeedPreset('normal')">Обычный</button>
+                    <button class="eq-btn" id="speedPresetSlowed" onclick="setSpeedPreset('slowed')">Slowed + Reverb</button>
+                    <button class="eq-btn" id="speedPresetNightcore" onclick="setSpeedPreset('nightcore')">Nightcore</button>
+                </div>
+            </div>
+
+            <!-- Ambient Glow Effects -->
+            <div class="fx-group border-top" style="margin-top: 18px;">
+                <span class="fx-name">🪐 ЭФФЕКТЫ ОКРУЖЕНИЯ</span>
+                <div class="checkbox-row" style="margin-top: 4px;">
+                    <label class="custom-chk-label" style="font-size: 0.7rem; color: var(--text-muted); cursor: pointer; display: flex; align-items: center; gap: 6px;">
+                        <input type="checkbox" id="chkPulseBg" checked onchange="togglePulseBg(this.checked)">
+                        Пульсация фона под басы
+                    </label>
+                </div>
+            </div>
+        </div>
+
+        <div class="fx-footer-note" style="margin-top: 24px; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 12px; font-size: 0.6rem; color: var(--text-muted); line-height: 1.4;">
+            <p>Эффекты применяются в реальном времени с помощью аппаратного ускорения Web Audio API.</p>
+        </div>
+    </aside>
+
+    <!-- Account Modal -->
+    <div class="modal-overlay" id="accountModal">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3>🪐 Nebula Sync &amp; Профиль</h3>
+                <button class="modal-close-btn" onclick="closeAccountModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <!-- Logged Out View -->
+                <div id="authView">
+                    <p class="modal-desc">Создайте локальный профиль для сохранения избранного и плейлистов с возможностью облачной синхронизации.</p>
+                    <div class="input-group">
+                        <label>Никнейм / Логин</label>
+                        <input type="text" id="inputUsername" placeholder="Введите имя...">
+                    </div>
+                    <div class="input-group">
+                        <label>Пароль</label>
+                        <input type="password" id="inputPassword" placeholder="••••••••">
+                    </div>
+                    <div class="modal-actions">
+                        <button class="auth-btn btn-login" onclick="handleAuth('login')">Войти</button>
+                        <button class="auth-btn btn-register" onclick="handleAuth('register')">Регистрация</button>
+                    </div>
+                </div>
+                
+                <!-- Logged In View -->
+                <div id="profileView" style="display: none;">
+                    <div class="profile-summary">
+                        <div class="profile-avatar-select" onclick="cycleAvatar()">
+                            <span id="profileAvatarBig">👽</span>
+                            <small>Сменить аватар</small>
+                        </div>
+                        <div class="profile-details">
+                            <h4 id="profileUsername">Никнейм</h4>
+                            <p id="profileSyncDate">Синхронизировано: никогда</p>
+                        </div>
+                    </div>
+                    
+                    <div class="sync-stats-box">
+                        <div class="stat-row"><span>В избранном:</span> <span id="statFavorites">0 треков</span></div>
+                        <div class="stat-row"><span>Локальных треков:</span> <span id="statTracks">0 треков</span></div>
+                    </div>
+
+                    <div class="modal-actions-column">
+                        <button class="action-btn btn-sync" id="btnSyncCloud" onclick="syncWithCloud()">☁️ Синхронизировать сейчас</button>
+                        <button class="action-btn btn-logout" onclick="handleLogout()">Выйти из аккаунта</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Script loading -->
+    <script src="app.js"></script>
+</body>
+</html>
