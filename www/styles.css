@@ -1060,25 +1060,190 @@ body.is-electron .custom-titlebar {
     }
 }
 
+/* Mobile bottom navigation (Hidden by default on desktop) */
+.mobile-bottom-nav {
+    display: none;
+}
+
 @media (max-width: 768px) {
+    /* Hide desktop sidebar and pad bottom for floating elements */
     .app-layout {
-        grid-template-columns: 1fr; /* Hide sidebar entirely or go mobile layout */
-    }
-    .sidebar {
-        display: none;
-    }
-    .bottom-player-bar {
         grid-template-columns: 1fr;
-        grid-template-rows: auto auto;
-        height: auto;
-        padding: 14px;
+        padding-bottom: 145px !important; /* Leave space for floating player + bottom nav */
+        height: 100vh;
+    }
+    
+    .sidebar {
+        display: none !important;
+    }
+    
+    /* Show mobile bottom nav with synthwave glassmorphism */
+    .mobile-bottom-nav {
+        display: flex !important;
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        height: 60px;
+        background: rgba(8, 4, 16, 0.94);
+        border-top: 1px solid var(--border-color);
+        justify-content: space-around;
+        align-items: center;
+        z-index: 1000;
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        padding: 0 10px;
+    }
+    
+    .mobile-nav-item {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 4px;
+        color: var(--text-muted);
+        text-decoration: none;
+        font-size: 0.65rem;
+        font-family: 'Plus Jakarta Sans', sans-serif;
+        font-weight: 500;
+        flex-grow: 1;
+        height: 100%;
+        transition: all var(--transition-fast);
+    }
+    
+    .mobile-nav-item i {
+        font-size: 1.25rem;
+    }
+    
+    .mobile-nav-item.active {
+        color: var(--accent-secondary);
+        text-shadow: 0 0 10px rgba(0, 240, 255, 0.3);
+    }
+    
+    .mobile-nav-item.active i {
+        color: var(--accent-secondary);
+    }
+    
+    /* Make bottom player bar a gorgeous floating mini-player */
+    .bottom-player-bar {
+        position: fixed;
+        bottom: 72px;
+        left: 12px;
+        right: 12px;
+        height: 64px;
+        border-radius: 14px;
+        background: rgba(22, 11, 41, 0.88);
+        border: 1px solid var(--border-color);
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+        backdrop-filter: blur(15px);
+        -webkit-backdrop-filter: blur(15px);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 16px;
+        z-index: 998;
+        width: auto;
+    }
+    
+    /* Left: Cover art and text */
+    .bar-track-info {
+        max-width: 60%;
+        gap: 10px;
+    }
+    
+    .bar-album-cover {
+        width: 40px;
+        height: 40px;
+        font-size: 1.1rem;
+    }
+    
+    .bar-track-details h4 {
+        font-size: 0.82rem;
+        max-width: 140px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    
+    .bar-track-details p {
+        font-size: 0.7rem;
+        max-width: 140px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    
+    #trackStatus {
+        display: none !important; /* Keep it clean on mobile */
+    }
+    
+    /* Center: controls */
+    .bar-player-controls {
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 8px;
+        flex-grow: 1;
+    }
+    
+    .playback-controls {
+        display: flex;
+        align-items: center;
         gap: 12px;
     }
-    .bar-track-info {
-        justify-content: center;
+    
+    /* Hide secondary buttons on mobile mini-player */
+    .playback-controls .ctrl-btn:not(.ctrl-btn-play):not(.ctrl-btn-step):not(.ctrl-btn-like) {
+        display: none !important;
     }
+    
+    .playback-controls #btnPrev {
+        display: none !important; /* Only show Play/Pause and Next on mini-player */
+    }
+    
+    .ctrl-btn {
+        width: 32px;
+        height: 32px;
+        font-size: 1rem;
+    }
+    
+    .ctrl-btn-play {
+        width: 38px;
+        height: 38px;
+        font-size: 1.35rem;
+    }
+    
+    /* Premium thin progress line at the very top of mini-player */
+    .timeline-container {
+        position: absolute;
+        top: 0;
+        left: 12px;
+        right: 12px;
+        width: calc(100% - 24px);
+        padding: 0;
+        margin: 0;
+        height: 2px;
+    }
+    
+    .timeline-container .time-stamp {
+        display: none !important; /* Hide timestamps on mobile mini-player */
+    }
+    
+    .progress-bar-wrapper {
+        height: 2px;
+        border-radius: 0;
+        background: rgba(255, 255, 255, 0.1);
+        margin: 0;
+    }
+    
+    .progress-bar-fill {
+        height: 2px;
+    }
+    
+    /* Hide extra controls on mobile */
     .bar-extra-controls {
-        display: none; /* Hide extra settings on small devices */
+        display: none !important;
     }
 }
 

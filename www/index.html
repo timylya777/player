@@ -575,7 +575,7 @@
                     <h4 style="font-size: 0.9rem; font-weight: 600; color: #fff; margin-bottom: 8px; display: flex; align-items: center; gap: 8px;"><i class="ph ph-wifi-high" style="color: var(--accent-secondary);"></i> Настройки подключения</h4>
                     <p class="modal-desc" style="font-size: 0.72rem; margin-bottom: 12px; color: var(--text-muted); line-height: 1.4;">Укажите IP-адрес компьютера, где запущен yt_proxy.py, для доступа с мобильных устройств (например, http://192.168.1.100:9001):</p>
                     <div class="input-group" style="display: flex; gap: 8px; align-items: center; margin-bottom: 0;">
-                        <input type="text" id="inputApiBaseUrl" placeholder="http://localhost:9001" style="flex-grow: 1; padding: 10px 14px; background: rgba(0,0,0,0.3); border: 1px solid var(--border-color); border-radius: var(--radius-sm); color: #fff; outline: none; font-size: 0.85rem;">
+                        <input type="text" id="inputApiBaseUrl" placeholder="http://192.168.31.15:9001" style="flex-grow: 1; padding: 10px 14px; background: rgba(0,0,0,0.3); border: 1px solid var(--border-color); border-radius: var(--radius-sm); color: #fff; outline: none; font-size: 0.85rem;">
                         <button class="auth-btn btn-login" style="padding: 10px 18px; font-size: 0.8rem; margin: 0; min-width: auto; height: 38px; flex-shrink: 0; display: flex; align-items: center; justify-content: center;" onclick="saveConnectionSettings()">Применить</button>
                     </div>
                 </div>
@@ -618,6 +618,30 @@
             </div>
         </div>
     </div>
+    
+    <!-- Sleek Glassy Bottom Navigation for Mobile -->
+    <nav class="mobile-bottom-nav">
+        <a href="#" class="mobile-nav-item active" id="mobNavHome" onclick="showSection('home')">
+            <i class="ph ph-house"></i>
+            <span>Главная</span>
+        </a>
+        <a href="#" class="mobile-nav-item" id="mobNavSearch" onclick="showSection('youtube')">
+            <i class="ph ph-magnifying-glass"></i>
+            <span>Поиск</span>
+        </a>
+        <a href="#" class="mobile-nav-item" id="mobNavLibrary" onclick="showLibraryDashboard()">
+            <i class="ph ph-folder"></i>
+            <span>Медиатека</span>
+        </a>
+        <a href="#" class="mobile-nav-item" id="mobNavLyrics" onclick="showSection('lyrics')">
+            <i class="ph ph-text-align-left"></i>
+            <span>Текст</span>
+        </a>
+        <a href="#" class="mobile-nav-item" id="mobNavRoom" onclick="showSection('room')">
+            <i class="ph ph-users"></i>
+            <span>Комната</span>
+        </a>
+    </nav>
     
     <!-- Script loading -->
     <script src="app.js?v=2"></script>

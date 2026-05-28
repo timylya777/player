@@ -104,7 +104,11 @@ let currentAvatarIdx = 0;
 let lastSaveTime = 0;
 
 // Server API Configuration (for mobile/Capacitor support)
-let API_BASE_URL = localStorage.getItem("nebula_api_base_url") || "${API_BASE_URL}";
+let API_BASE_URL = localStorage.getItem("nebula_api_base_url");
+if (!API_BASE_URL || API_BASE_URL === "http://localhost:9001" || API_BASE_URL.includes("API_BASE_URL")) {
+    API_BASE_URL = "http://192.168.31.15:9001";
+    localStorage.setItem("nebula_api_base_url", API_BASE_URL);
+}
 
 // Web Audio API Nodes
 let audioCtx = null;
@@ -2220,6 +2224,23 @@ function showSection(sectionId) {
         activeNav.classList.add("active");
     }
 
+    // Update active mobile nav items
+    document.querySelectorAll(".mobile-bottom-nav .mobile-nav-item").forEach(item => {
+        item.classList.remove("active");
+    });
+    const mobNavIdMap = {
+        'home': 'mobNavHome',
+        'youtube': 'mobNavSearch',
+        'playlist': 'mobNavLibrary',
+        'lyrics': 'mobNavLyrics',
+        'room': 'mobNavRoom'
+    };
+    const targetMobNavId = mobNavIdMap[sectionId] || (sectionId === 'playlist' ? 'mobNavLibrary' : null);
+    if (targetMobNavId) {
+        const activeMobNav = document.getElementById(targetMobNavId);
+        if (activeMobNav) activeMobNav.classList.add("active");
+    }
+
     // Force canvas resize on Visualizer layout change
     if (sectionId === 'visualizer') {
         setTimeout(resizeCanvas, 50);
@@ -2709,6 +2730,10 @@ function showLibraryDashboard() {
     document.querySelectorAll(".sidebar-nav .nav-item").forEach(n => n.classList.remove("active"));
     const navPlaylist = document.getElementById('navPlaylist');
     if (navPlaylist) navPlaylist.classList.add('active');
+
+    document.querySelectorAll(".mobile-bottom-nav .mobile-nav-item").forEach(n => n.classList.remove("active"));
+    const mobPlaylist = document.getElementById('mobNavLibrary');
+    if (mobPlaylist) mobPlaylist.classList.add('active');
     
     const userToFetch = typeof loggedInUser !== 'undefined' ? loggedInUser : getOrCreateGuestId();
     if (userToFetch) {
